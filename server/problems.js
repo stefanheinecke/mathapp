@@ -2,42 +2,34 @@
 // Jede Aufgabe hat ein Jahr (Pruefungsjahrgang) und eine Kategorie fuer Uebungs-/Pruefungsmodus.
 // Die Musterloesung ("answer") bleibt serverseitig und wird nie an den Client geschickt.
 export const PROBLEMS = [
-  { id: "add1", text: "Berechne: 24 + 38 =", answer: "62", year: 2024, category: "Arithmetik" },
   {
     id: "eq1",
-    text: "Loese die Gleichung nach x auf: 3x + 5 = 20",
-    answer: "x = 5",
-    year: 2024,
+    text: "Vereinfache die Terme soweit wie möglich: (3x/4)*(2/9):(x/2)",
+    answer: "x = 1/3",
+    year: 2026,
     category: "Gleichung",
   },
   {
-    id: "eq2",
-    text: "Vereinfache die Terme soweit wie möglich.: 8xy−6x**2y∶(3x)",
+    id: "term1",
+    text: "Vereinfache die Terme soweit wie möglich: 8xy−6x²y∶(3x)",
     answer: "6𝑥𝑦",
-    year: 2025,
+    year: 2026,
     category: "Termumformung",
   },
   {
-    id: "quad1",
-    text: "Löse die Gleichung nach x auf: 3x² + 9x² = 48",
-    answer: "x = 2",
-    year: 2025,
-    category: "Gleichung",
+    id: "term2",
+    text: " Dividiere die 2.Potenz von 12 durch die 3.Potenz von 2",
+    answer: "18",
+    year: 2026,
+    category: "Termumformung",
   },
   {
-    id: "sqrt1",
-    text: "Löse die Gleichung nach x auf: √(36 + 28)",
-    answer: "x = 8",
+    id: "term3",
+    text: "Bestimme den Term, von dem man 4x−3 subtrahieren muss, um −x+2 zu erhalten",
+    answer: "3x-1",
     year: 2026,
-    category: "Gleichung",
-  },
-  {
-    id: "frac1",
-    text: "Vereinfache den Bruch soweit wie möglich: 18/24",
-    answer: "3/4",
-    year: 2026,
-    category: "Bruchrechnen",
-  },
+    category: "Termumformung",
+  }
 ];
 
 export function findProblem(id) {
