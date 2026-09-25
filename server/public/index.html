@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mathe-Uebung Prototyp</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <h1>Mathe-Uebung: Prototyp</h1>
+
+    <section id="problem-select">
+      <label for="problem">Aufgabe:</label>
+      <select id="problem"></select>
+    </section>
+
+    <p id="problem-text" class="problem-text"></p>
+
+    <section class="canvas-wrap">
+      <canvas id="notebook" width="800" height="500"></canvas>
+      <div class="toolbar">
+        <button id="clear-btn">Loeschen</button>
+        <button id="submit-btn">Abgeben</button>
+      </div>
+    </section>
+
+    <section id="result" class="result hidden">
+      <h2>Ergebnis</h2>
+      <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
+      <p><strong>Erkanntes LaTeX (MathPix):</strong> <span id="result-latex"></span></p>
+      <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
+      <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
+    </section>
+
+    <p id="status" class="status"></p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
