@@ -52,7 +52,7 @@ async function recognizeHandwriting(imageDataUrl) {
 const PROBLEMS = [
   { id: "add1", text: "Berechne: 24 + 38 =", answer: "62" },
   { id: "eq1", text: "Loese die Gleichung nach x auf: 3x + 5 = 20", answer: "x = 5" },
-  { id: "eq2", text: "Vereinfache die Terme soweit wie möglich.: 8xy−6x2y∶(3x)", answer: "6𝑥𝑦" },
+  { id: "eq2", text: "Vereinfache die Terme soweit wie möglich.: 8xy−6x**2y∶(3x)", answer: "6𝑥𝑦" },
   { id: "frac1", text: "Vereinfache den Bruch soweit wie möglich: 18/24", answer: "3/4" },
 ];
 
