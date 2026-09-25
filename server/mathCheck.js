@@ -20,7 +20,10 @@ function splitIntoLines(text) {
 
 function symbolsOf(node) {
   const symbols = new Set();
-  node.traverse((n) => {
+  node.traverse((n, path, parent) => {
+    // Der Funktionsname (z.B. "sqrt" in sqrt(x+1)) ist selbst ein SymbolNode-Kind des
+    // FunctionNode und darf nicht als Unbekannte gezaehlt werden.
+    if (parent && parent.type === "FunctionNode" && path === "fn") return;
     if (n.isSymbolNode && !KNOWN_CONSTANTS.has(n.name)) symbols.add(n.name);
   });
   return symbols;
