@@ -53,6 +53,8 @@ const PROBLEMS = [
   { id: "add1", text: "Berechne: 24 + 38 =", answer: "62" },
   { id: "eq1", text: "Loese die Gleichung nach x auf: 3x + 5 = 20", answer: "x = 5" },
   { id: "eq2", text: "Vereinfache die Terme soweit wie möglich.: 8xy−6x**2y∶(3x)", answer: "6𝑥𝑦" },
+  { id: "quad1", text: "Löse die Gleichung nach x auf: x² − 5x + 6 = 0", answer: "x = 2 oder x = 3" },
+  { id: "sqrt1", text: "Löse die Gleichung nach x auf: √(x + 1) = 3", answer: "x = 8" },
   { id: "frac1", text: "Vereinfache den Bruch soweit wie möglich: 18/24", answer: "3/4" },
 ];
 
