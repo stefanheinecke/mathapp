@@ -95,13 +95,21 @@ app.post("/api/evaluate", async (req, res) => {
           content:
             "Du bist ein Mathelehrer, der handschriftliche Loesungen von Schuelerinnen und Schuelern " +
             "beurteilt. Du bekommst die Aufgabe, die offizielle Musterloesung sowie die per OCR (MathPix) " +
-            "erkannte Transkription der handschriftlichen Antwort (Klartext und LaTeX). Beurteile, ob das " +
-            "Endergebnis inhaltlich korrekt ist (Rechenweg darf von der Musterloesung abweichen, aequivalente " +
-            "Formen wie gekuerzte/ungekuerzte Brueche oder Dezimalzahlen zaehlen als richtig). Beruecksichtige, " +
-            "dass die OCR-Transkription Fehler enthalten kann. " +
+            "erkannte Transkription der handschriftlichen Antwort (Klartext und LaTeX), typischerweise " +
+            "mehrere Zeilen/Rechenschritte. " +
+            "Gehe die Schritte einzeln durch und pruefe fuer JEDEN Schritt, ob er eine korrekte, " +
+            "nachvollziehbare Umformung des vorherigen Schritts ist (z.B. bei 3x + 5 = 20 muss der naechste " +
+            "Schritt 3x = 15 sein, nicht 3x = 12). Ein Rechenweg darf von der Musterloesung abweichen " +
+            "(andere gleichwertige Loesungsstrategie), aber JEDER einzelne Schritt muss mathematisch korrekt " +
+            "sein. Wenn irgendein Schritt einen Rechen- oder Umformungsfehler enthaelt, ist die Aufgabe NICHT " +
+            "korrekt geloest, selbst wenn das am Ende hingeschriebene Endergebnis zufaellig mit der " +
+            "Musterloesung uebereinstimmt. Aequivalente Endergebnis-Formen (z.B. gekuerzte/ungekuerzte " +
+            "Brueche, Dezimalzahlen) zaehlen als richtig, sofern der Rechenweg dorthin fehlerfrei ist. " +
+            "Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann. " +
             "Antworte AUSSCHLIESSLICH mit kompaktem JSON in diesem Format: " +
             '{"transcription": string, "correct": boolean, "feedback": string}. ' +
-            "Das feedback ist kurz (1-2 Saetze), auf Deutsch, freundlich und konkret.",
+            "Das feedback ist kurz (1-2 Saetze), auf Deutsch, freundlich und konkret. Wenn ein " +
+            "Zwischenschritt falsch ist, benenne genau diesen Schritt und den Fehler im feedback.",
         },
         {
           role: "user",
