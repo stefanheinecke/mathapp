@@ -5,6 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import { checkSteps } from "./mathCheck.js";
+import { PROBLEMS, filterProblems, listYears, listCategories } from "./problems.js";
+import { initDb, saveResult, getResultsForPlayer } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,24 +49,25 @@ async function recognizeHandwriting(imageDataUrl) {
   };
 }
 
-// Kleine, fest hinterlegte Beispielaufgaben fuer den Prototyp.
+// Kleine, fest hinterlegte Beispielaufgaben fuer den Prototyp (siehe problems.js).
 // Die Loesung bleibt serverseitig, damit sie nicht im Client manipuliert werden kann.
-const PROBLEMS = [
-  { id: "add1", text: "Berechne: 24 + 38 =", answer: "62" },
-  { id: "eq1", text: "Loese die Gleichung nach x auf: 3x + 5 = 20", answer: "x = 5" },
-  { id: "eq2", text: "Vereinfache die Terme soweit wie möglich.: 8xy−6x**2y∶(3x)", answer: "6𝑥𝑦" },
-  { id: "quad1", text: "Löse die Gleichung nach x auf: 3x² + 9x² = 48", answer: "x = 2" },
-  { id: "sqrt1", text: "Löse die Gleichung nach x auf: √(36 + 28)", answer: "x = 8" },
-  { id: "frac1", text: "Vereinfache den Bruch soweit wie möglich: 18/24", answer: "3/4" },
-];
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "8mb" })); // handschriftliches Bild als Base64-PNG
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/api/problems", (_req, res) => {
-  res.json(PROBLEMS.map(({ id, text }) => ({ id, text })));
+// Liefert die verfuegbaren Jahre/Kategorien fuer die Auswahl-Dropdowns im Frontend.
+app.get("/api/meta", (_req, res) => {
+  res.json({ years: listYears(), categories: listCategories() });
+});
+
+// Uebungsmodus: einzelne Aufgabe nach Jahr/Kategorie filtern.
+// Pruefungsmodus: alle Aufgaben eines Jahres bzw. einer Kategorie abrufen (gleicher Endpunkt).
+app.get("/api/problems", (req, res) => {
+  const { year, category } = req.query;
+  const filtered = filterProblems({ year, category });
+  res.json(filtered.map(({ id, text, year, category }) => ({ id, text, year, category })));
 });
 
 app.post("/api/evaluate", async (req, res) => {
@@ -173,7 +176,56 @@ app.post("/api/evaluate", async (req, res) => {
   }
 });
 
+const ALLOWED_MODES = new Set(["uebung", "pruefung_jahr", "pruefung_kategorie"]);
+
+// Speichert das Ergebnis eines Uebungsdurchgangs (1 Aufgabe) oder einer ganzen Pruefung
+// (mehrere Aufgaben nach Jahr/Kategorie). Name, Zeitpunkt, Anzahl richtig/gesamt, Prozent und
+// gesammelte Sterne werden in Postgres abgelegt.
+app.post("/api/results", async (req, res) => {
+  try {
+    const { playerName, mode, scope, details } = req.body || {};
+    if (typeof playerName !== "string" || playerName.trim().length === 0 || playerName.length > 60) {
+      return res.status(400).json({ error: "playerName ist erforderlich (max. 60 Zeichen)." });
+    }
+    if (!ALLOWED_MODES.has(mode)) {
+      return res.status(400).json({ error: "mode muss uebung, pruefung_jahr oder pruefung_kategorie sein." });
+    }
+    if (typeof scope !== "string" || scope.trim().length === 0) {
+      return res.status(400).json({ error: "scope (Aufgabe/Jahr/Kategorie) ist erforderlich." });
+    }
+    if (
+      !Array.isArray(details) ||
+      details.length === 0 ||
+      !details.every((d) => d && typeof d.problemId === "string" && typeof d.correct === "boolean")
+    ) {
+      return res.status(400).json({ error: "details muss ein nicht-leeres Array aus {problemId, correct} sein." });
+    }
+
+    const saved = await saveResult({ playerName: playerName.trim(), mode, scope, details });
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Ergebnis konnte nicht gespeichert werden.", details: err?.message });
+  }
+});
+
+// Verlauf/Sterne-Stand fuer einen Namen (kein Login, nur einfache Zuordnung per Name).
+app.get("/api/results", async (req, res) => {
+  try {
+    const playerName = String(req.query.playerName || "").trim();
+    if (!playerName) {
+      return res.status(400).json({ error: "playerName Query-Parameter ist erforderlich." });
+    }
+    const results = await getResultsForPlayer(playerName);
+    res.json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Ergebnisse konnten nicht geladen werden.", details: err?.message });
+  }
+});
+
 const port = process.env.PORT || 3000;
+await initDb();
 app.listen(port, "0.0.0.0", () => {
   console.log(`Matheapp Prototyp laeuft auf Port ${port}`);
 });

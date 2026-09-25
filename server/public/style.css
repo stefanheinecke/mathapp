@@ -84,3 +84,103 @@ button {
   min-height: 1.5rem;
   color: #666;
 }
+
+.hidden {
+  display: none !important;
+}
+
+.screen label {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.screen select,
+.screen input[type="text"] {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  padding: 0.5rem;
+  font-size: 1rem;
+  margin-top: 0.25rem;
+  border: 1px solid #999;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.mode-buttons {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mode-buttons button {
+  font-size: 1.1rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.variant-btn.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.btn-secondary {
+  background: #eee;
+}
+
+.task-progress {
+  font-weight: 600;
+  color: #555;
+}
+
+.stars-total {
+  font-size: 1.1rem;
+  color: #b8860b;
+}
+
+.summary-score {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.summary-stars {
+  font-size: 2rem;
+  letter-spacing: 0.25rem;
+}
+
+#history-list table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #fff;
+}
+
+#history-list th,
+#history-list td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.star-earned {
+  display: inline-block;
+  font-size: 2rem;
+  animation: pop 0.4s ease-out;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}

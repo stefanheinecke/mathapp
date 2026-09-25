@@ -10,30 +10,104 @@
   <main>
     <h1>Mathe-Uebung: Prototyp</h1>
 
-    <section id="problem-select">
-      <label for="problem">Aufgabe:</label>
-      <select id="problem"></select>
-    </section>
+    <!-- Startbildschirm: Name eingeben, Modus waehlen -->
+    <section id="screen-start" class="screen">
+      <label for="player-name">Dein Name:</label>
+      <input id="player-name" type="text" maxlength="60" placeholder="z.B. Alex" />
+      <p id="stars-total" class="stars-total hidden"></p>
 
-    <p id="problem-text" class="problem-text"></p>
-
-    <section class="canvas-wrap">
-      <canvas id="notebook" width="800" height="500"></canvas>
-      <div class="toolbar">
-        <button id="clear-btn">Loeschen</button>
-        <button id="submit-btn">Abgeben</button>
+      <div class="mode-buttons">
+        <button id="btn-mode-uebung">📖 Übungsmodus</button>
+        <button id="btn-mode-pruefung">📝 Prüfungsmodus</button>
+        <button id="btn-mode-history">📊 Meine Ergebnisse</button>
       </div>
     </section>
 
-    <section id="result" class="result hidden">
-      <h2>Ergebnis</h2>
-      <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
-      <p><strong>Erkanntes LaTeX (MathPix):</strong> <span id="result-latex"></span></p>
-      <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
-      <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
+    <!-- Uebungsmodus: Aufgabe nach Jahr/Kategorie auswaehlen -->
+    <section id="screen-uebung-setup" class="screen hidden">
+      <h2>Übungsmodus</h2>
+      <label for="uebung-year">Jahr:</label>
+      <select id="uebung-year"><option value="">Alle Jahre</option></select>
+
+      <label for="uebung-category">Kategorie:</label>
+      <select id="uebung-category"><option value="">Alle Kategorien</option></select>
+
+      <label for="uebung-problem">Aufgabe:</label>
+      <select id="uebung-problem"></select>
+
+      <div class="toolbar">
+        <button id="btn-uebung-back" class="btn-secondary">Zurück</button>
+        <button id="btn-uebung-start">Starten</button>
+      </div>
     </section>
 
-    <p id="status" class="status"></p>
+    <!-- Pruefungsmodus: nach Jahr oder Kategorie, dann Wert waehlen -->
+    <section id="screen-pruefung-setup" class="screen hidden">
+      <h2>Prüfungsmodus</h2>
+      <div class="mode-buttons">
+        <button id="btn-pruefung-jahr" class="variant-btn">Nach Jahr</button>
+        <button id="btn-pruefung-kategorie" class="variant-btn">Nach Kategorie</button>
+      </div>
+
+      <div id="pruefung-jahr-picker" class="hidden">
+        <label for="pruefung-year">Jahr:</label>
+        <select id="pruefung-year"></select>
+      </div>
+
+      <div id="pruefung-kategorie-picker" class="hidden">
+        <label for="pruefung-category">Kategorie:</label>
+        <select id="pruefung-category"></select>
+      </div>
+
+      <div class="toolbar">
+        <button id="btn-pruefung-back" class="btn-secondary">Zurück</button>
+        <button id="btn-pruefung-start" class="hidden">Prüfung starten</button>
+      </div>
+    </section>
+
+    <!-- Gemeinsamer Aufgaben-Bildschirm (Uebung: 1 Aufgabe, Pruefung: mehrere nacheinander) -->
+    <section id="screen-task" class="screen hidden">
+      <p id="task-progress" class="task-progress hidden"></p>
+      <p id="problem-text" class="problem-text"></p>
+
+      <section class="canvas-wrap">
+        <canvas id="notebook" width="800" height="500"></canvas>
+        <div class="toolbar">
+          <button id="clear-btn">Löschen</button>
+          <button id="submit-btn">Abgeben</button>
+        </div>
+      </section>
+
+      <section id="result" class="result hidden">
+        <h2>Ergebnis</h2>
+        <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
+        <p><strong>Erkanntes LaTeX (MathPix):</strong> <span id="result-latex"></span></p>
+        <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
+        <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
+        <button id="btn-next">Weiter</button>
+      </section>
+
+      <p id="status" class="status"></p>
+    </section>
+
+    <!-- Zusammenfassung am Ende einer Pruefung -->
+    <section id="screen-summary" class="screen hidden">
+      <h2>Ergebnis der Prüfung</h2>
+      <p id="summary-score" class="summary-score"></p>
+      <p id="summary-stars" class="summary-stars"></p>
+      <div class="toolbar">
+        <button id="btn-summary-restart">Zurück zur Startseite</button>
+      </div>
+    </section>
+
+    <!-- Verlauf/Ergebnisse eines Namens -->
+    <section id="screen-history" class="screen hidden">
+      <h2>Meine Ergebnisse</h2>
+      <div id="history-list"></div>
+      <div class="toolbar">
+        <button id="btn-history-back" class="btn-secondary">Zurück</button>
+      </div>
+    </section>
   </main>
 
   <script src="app.js"></script>
