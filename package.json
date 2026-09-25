@@ -1,0 +1,10 @@
+{
+  "name": "matheapp",
+  "private": true,
+  "workspaces": [
+    "server"
+  ],
+  "scripts": {
+    "start": "npm start --workspace server"
+  }
+}
