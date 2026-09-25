@@ -4,6 +4,7 @@ import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
+import { checkSteps } from "./mathCheck.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,6 +52,7 @@ async function recognizeHandwriting(imageDataUrl) {
 const PROBLEMS = [
   { id: "add1", text: "Berechne: 24 + 38 =", answer: "62" },
   { id: "eq1", text: "Loese die Gleichung nach x auf: 3x + 5 = 20", answer: "x = 5" },
+  { id: "eq2", text: "Loese die Gleichung nach x auf: 3x^2 + sqrt(9) = 78", answer: "x = 5" },
   { id: "frac1", text: "Vereinfache den Bruch so weit wie moeglich: 18/24", answer: "3/4" },
 ];
 
@@ -86,6 +88,10 @@ app.post("/api/evaluate", async (req, res) => {
       return res.status(502).json({ error: "Handschrifterkennung (MathPix) fehlgeschlagen.", details: err?.message });
     }
 
+    // Deterministische Vorpruefung (kein LLM): findet Widersprueche zwischen Rechenschritten
+    // und falsche Zahlengleichungen anhand echter Arithmetik/Algebra (mathjs).
+    const deterministic = checkSteps(recognized.text);
+
     const completion = await openai.chat.completions.create({
       model: MODEL,
       temperature: 0,
@@ -96,18 +102,25 @@ app.post("/api/evaluate", async (req, res) => {
             "Du bist ein Mathelehrer, der handschriftliche Loesungen von Schuelerinnen und Schuelern " +
             "beurteilt. Du bekommst die Aufgabe, die offizielle Musterloesung sowie die per OCR (MathPix) " +
             "erkannte Transkription der handschriftlichen Antwort (Klartext und LaTeX), typischerweise " +
-            "mehrere Zeilen/Rechenschritte. " +
-            "Gehe die Schritte einzeln durch und pruefe fuer JEDEN Schritt, ob er eine korrekte, " +
-            "nachvollziehbare Umformung des vorherigen Schritts ist (z.B. bei 3x + 5 = 20 muss der naechste " +
-            "Schritt 3x = 15 sein, nicht 3x = 12). Ein Rechenweg darf von der Musterloesung abweichen " +
-            "(andere gleichwertige Loesungsstrategie), aber JEDER einzelne Schritt muss mathematisch korrekt " +
-            "sein. Wenn irgendein Schritt einen Rechen- oder Umformungsfehler enthaelt, ist die Aufgabe NICHT " +
-            "korrekt geloest, selbst wenn das am Ende hingeschriebene Endergebnis zufaellig mit der " +
-            "Musterloesung uebereinstimmt. Aequivalente Endergebnis-Formen (z.B. gekuerzte/ungekuerzte " +
-            "Brueche, Dezimalzahlen) zaehlen als richtig, sofern der Rechenweg dorthin fehlerfrei ist. " +
-            "Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann. " +
-            "Antworte AUSSCHLIESSLICH mit kompaktem JSON in diesem Format: " +
-            '{"transcription": string, "correct": boolean, "feedback": string}. ' +
+            "mehrere Zeilen/Rechenschritte.\n\n" +
+            "Gehe VOR deiner Bewertung wie folgt vor:\n" +
+            "1. Zerlege die Transkription in einzelne Rechenschritte/Zeilen.\n" +
+            "2. Rechne fuer jeden Schritt explizit nach (echte Arithmetik, keine Vermutung), ob er eine " +
+            "korrekte Umformung des vorherigen Schritts ist (z.B. bei 3x + 5 = 20 muss 20 - 5 = 15 gerechnet " +
+            "werden, der Folgeschritt muss also 3x = 15 lauten; 3x = 12 waere falsch, weil 20 - 5 nicht 12 ist).\n" +
+            "3. Ein Rechenweg darf von der Musterloesung abweichen (andere gleichwertige Loesungsstrategie), " +
+            "aber JEDER einzelne Schritt muss fuer sich mathematisch korrekt sein.\n" +
+            "4. Wenn irgendein Schritt einen Rechen- oder Umformungsfehler enthaelt, ist die Aufgabe NICHT " +
+            "korrekt geloest, selbst wenn ein spaeter hingeschriebenes Endergebnis zufaellig mit der " +
+            "Musterloesung uebereinstimmt.\n" +
+            "5. Aequivalente Endergebnis-Formen (z.B. gekuerzte/ungekuerzte Brueche, Dezimalzahlen) zaehlen " +
+            "als richtig, sofern der Rechenweg dorthin fehlerfrei ist.\n" +
+            "6. Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann.\n\n" +
+            "Antworte AUSSCHLIESSLICH mit kompaktem JSON, GENAU in dieser Schluesselreihenfolge: " +
+            '{"steps": [{"step": string, "valid": boolean, "check": string}], "transcription": string, ' +
+            '"correct": boolean, "feedback": string}. ' +
+            "Das Feld \"check\" enthaelt die nachgerechnete Arithmetik (z.B. \"20 - 5 = 15, nicht 12\"). " +
+            '"correct" muss false sein, sobald mindestens ein Eintrag in "steps" valid=false hat. ' +
             "Das feedback ist kurz (1-2 Saetze), auf Deutsch, freundlich und konkret. Wenn ein " +
             "Zwischenschritt falsch ist, benenne genau diesen Schritt und den Fehler im feedback.",
         },
@@ -116,7 +129,10 @@ app.post("/api/evaluate", async (req, res) => {
           content:
             `Aufgabe: ${problem.text}\nMusterloesung: ${problem.answer}\n\n` +
             `OCR-Klartext der Handschrift: ${recognized.text || "(leer)"}\n` +
-            `OCR-LaTeX der Handschrift: ${recognized.latex || "(leer)"}`,
+            `OCR-LaTeX der Handschrift: ${recognized.latex || "(leer)"}\n\n` +
+            (deterministic.problems.length > 0
+              ? `Eine automatische Nachrechnung hat folgende Widersprueche gefunden, beziehe sie in die Bewertung ein: ${deterministic.problems.join(" ")}`
+              : "Eine automatische Nachrechnung hat keine Widersprueche zwischen den Rechenschritten gefunden."),
         },
       ],
       response_format: { type: "json_object" },
@@ -130,11 +146,24 @@ app.post("/api/evaluate", async (req, res) => {
       return res.status(502).json({ error: "Konnte KI-Antwort nicht auswerten.", raw });
     }
 
+    const steps = Array.isArray(result.steps) ? result.steps : [];
+    const hasInvalidStep = steps.some((s) => s && s.valid === false);
+    // Serverseitiges Sicherheitsnetz: ein als falsch erkannter Schritt (LLM) oder ein deterministisch
+    // nachgerechneter Widerspruch (mathjs) macht die Aufgabe immer falsch, unabhaengig davon, was das
+    // Modell im obersten "correct"-Feld behauptet.
+    const correct = Boolean(result.correct) && !hasInvalidStep && deterministic.ok;
+    const feedback =
+      deterministic.problems.length > 0
+        ? `${result.feedback ?? ""} (Automatische Nachrechnung: ${deterministic.problems.join(" ")})`.trim()
+        : result.feedback ?? "";
+
     res.json({
       transcription: result.transcription || recognized.text,
       latex: recognized.latex,
-      correct: Boolean(result.correct),
-      feedback: result.feedback ?? "",
+      steps,
+      deterministicCheck: deterministic,
+      correct,
+      feedback,
     });
   } catch (err) {
     console.error(err);
