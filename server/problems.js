@@ -16,6 +16,11 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Gleichung",
     points: 1,
+    hints: [
+      "Ersetze die Division durch eine Multiplikation mit dem Kehrwert des letzten Bruchs.",
+      "Kürze wo möglich, bevor du die Brüche miteinander multiplizierst.",
+      "Rechne zuerst die Zahlenbrüche zusammen und behandle x separat.",
+    ],
   },
   {
     id: "2026-1a2",
@@ -24,6 +29,11 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Termumformung",
     points: 1,
+    hints: [
+      "Die Division bindet stärker als die Subtraktion – rechne zuerst 6x²y : (3x).",
+      "Kürze 6 durch 3 und x² durch x einzeln.",
+      "Nach dem Kürzen bleibt 2xy übrig – ziehe das von 8xy ab.",
+    ],
   },
   {
     id: "2026-1b",
@@ -32,6 +42,7 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Termumformung",
     points: 1,
+    hints: ["Berechne zuerst 12² und 2³ einzeln.", "12² = 144 und 2³ = 8.", "Teile 144 durch 8."],
   },
   {
     id: "2026-1c",
@@ -41,6 +52,11 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Termumformung",
     points: 1,
+    hints: [
+      "Gesucht ist ein Term T, für den gilt: T − (4x − 3) = −x + 2.",
+      "Forme die Gleichung nach T um: T = −x + 2 + (4x − 3).",
+      "Fasse die x-Terme und die Zahlen getrennt zusammen.",
+    ],
   },
   {
     id: "2026-1d",
@@ -49,6 +65,11 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Gleichung",
     points: 1,
+    hints: [
+      "Multipliziere zuerst beide Seiten mit 3, um den Bruch zu entfernen.",
+      "Danach steht da 6y = ax − 1. Bringe die −1 auf die andere Seite.",
+      "Zum Schluss musst du beide Seiten durch a teilen, um x zu isolieren.",
+    ],
   },
   {
     id: "2026-1e",
@@ -59,6 +80,11 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Textaufgabe",
     points: 1,
+    hints: [
+      "Gesucht ist das kleinste gemeinsame Vielfache (kgV) der beiden Zähnezahlen 10 und 12.",
+      "Zerlege 10 und 12 in Primfaktoren, um das kgV zu bestimmen.",
+      "Das kgV von 10 und 12 ist 60. Teile 60 durch die Zähnezahl des linken Zahnrads.",
+    ],
   },
   {
     id: "2026-1f",
@@ -67,16 +93,20 @@ const RAW_PROBLEMS = [
     year: 2026,
     category: "Grössenumrechnungen",
     points: 1,
+    hints: ["1 dm³ entspricht 1 Liter.", "1 Liter sind 1000 ml.", "Multipliziere 2.3 mit 1000."],
   },
   {
     id: "2026-1g",
-    latex: "Berechne x:",
+    text: "Berechne x:",
     images: ["/images/problem-2026-1g.png"],
     answer: "x = √72 = 6√2 ≈ 8.485",
     year: 2026,
     category: "Geometrie",
-    points: 1,
-  },
+    points: 1,    hints: [
+      "Überlege, ob du den Satz des Pythagoras anwenden kannst.",
+      "Bestimme zuerst die Quadrate der gegebenen Seitenlängen.",
+      "x ist die Wurzel aus der Summe bzw. Differenz der Quadrate – vereinfache die Wurzel so weit wie möglich.",
+    ],  },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
@@ -105,6 +135,7 @@ export const PROBLEMS = RAW_PROBLEMS.map((p) => ({
   ...p,
   text: p.text ?? deriveTextFromLatex(p.latex),
   images: p.images ?? [],
+  hints: p.hints ?? [],
 }));
 
 export function findProblem(id) {

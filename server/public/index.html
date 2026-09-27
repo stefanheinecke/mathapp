@@ -21,6 +21,13 @@
       <button id="nav-pruefung" class="nav-btn">📝 Prüfungsmodus</button>
       <button id="nav-history" class="nav-btn">📊 Meine Ergebnisse</button>
       <p id="stars-total" class="stars-total hidden"></p>
+      <div id="level-info" class="level-info hidden">
+        <p id="level-title" class="level-title"></p>
+        <div class="level-progress-track">
+          <div id="level-progress-fill" class="level-progress-fill"></div>
+        </div>
+        <p id="level-next" class="level-next"></p>
+      </div>
     </nav>
 
     <main>
@@ -83,7 +90,9 @@
         <div class="toolbar">
           <button id="clear-btn">Löschen</button>
           <button id="submit-btn">Abgeben</button>
+          <button id="hint-btn" class="hint-btn" title="Hinweis anzeigen (kostet die Punkte dieser Aufgabe)">💡 Hinweis</button>
         </div>
+        <p id="hint-box" class="hint-box hidden"></p>
       </section>
 
       <section id="result" class="result hidden">
@@ -115,6 +124,16 @@
       <div id="history-list"></div>
     </section>
     </main>
+  </div>
+
+  <!-- Level-Aufstieg: Konfetti + Glueckwunschmeldung -->
+  <div id="level-up-overlay" class="level-up-overlay hidden">
+    <div id="confetti-container" class="confetti-container"></div>
+    <div class="level-up-card">
+      <h2>🎉 Herzlichen Glückwunsch! 🎉</h2>
+      <p id="level-up-message"></p>
+      <button id="btn-level-up-close">Weiter</button>
+    </div>
   </div>
 
   <script

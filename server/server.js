@@ -80,9 +80,24 @@ app.get("/api/problems", (req, res) => {
   );
 });
 
+// Liefert Hinweise nacheinander (Schritt fuer Schritt), damit nie alle auf einmal im Netzwerk-Tab
+// sichtbar sind. index=0 -> erster Hinweis, index=1 -> zweiter, usw.
+app.get("/api/hint", (req, res) => {
+  const problem = PROBLEMS.find((p) => p.id === String(req.query.problemId || ""));
+  if (!problem) {
+    return res.status(404).json({ error: "Unbekannte Aufgabe." });
+  }
+  const hints = problem.hints || [];
+  if (hints.length === 0) {
+    return res.json({ hint: "Fuer diese Aufgabe sind leider keine Hinweise hinterlegt.", hintIndex: 0, totalHints: 0, hasMore: false });
+  }
+  const index = Math.max(0, Math.min(parseInt(req.query.index, 10) || 0, hints.length - 1));
+  res.json({ hint: hints[index], hintIndex: index, totalHints: hints.length, hasMore: index < hints.length - 1 });
+});
+
 app.post("/api/evaluate", async (req, res) => {
   try {
-    const { problemId, image } = req.body || {};
+    const { problemId, image, hintsUsed } = req.body || {};
     if (typeof problemId !== "string" || typeof image !== "string") {
       return res.status(400).json({ error: "problemId und image (Base64 PNG Data-URL) sind erforderlich." });
     }
@@ -193,11 +208,20 @@ app.post("/api/evaluate", async (req, res) => {
     } else {
       awarded = 0;
     }
+    // Wer Hinweise angefordert hat, bekommt fuer diese Aufgabe 0 Punkte - unabhaengig davon, ob das
+    // Ergebnis am Ende richtig ist. Der Rechenweg/das Ergebnis selbst wird trotzdem normal bewertet
+    // und im Feedback erwaehnt.
+    if (hintsUsed) {
+      awarded = 0;
+    }
     const fullyCorrect = awarded === points;
 
     const notes = [...deterministic.problems];
     if (pathState === "correct" && !resultCorrect) {
       notes.push("Der Rechenweg ist korrekt, aber das Endergebnis fehlt oder stimmt nicht \u2013 daher gibt es einen halben Punkt.");
+    }
+    if (hintsUsed) {
+      notes.push("Du hast Hinweise verwendet, deshalb gibt es fuer diese Aufgabe 0 Punkte.");
     }
     const feedback = notes.length > 0 ? `${result.feedback ?? ""} (${notes.join(" ")})`.trim() : result.feedback ?? "";
 
@@ -210,6 +234,7 @@ app.post("/api/evaluate", async (req, res) => {
       resultCorrect,
       points,
       awarded,
+      hintsUsed: Boolean(hintsUsed),
       correct: fullyCorrect,
       feedback,
     });

@@ -127,7 +127,10 @@ const state = {
   scope: null, // problemId (uebung) oder Jahr/Kategorie (pruefung)
   queue: [],
   currentIndex: 0,
-  results: [], // { problemId, correct }
+  results: [], // { problemId, points, awarded, fullyCorrect }
+  nextHintIndex: 0,
+  hintsUsedForCurrent: false,
+  starsBeforeRun: 0,
 };
 
 const playerNameInput = document.getElementById("player-name");
@@ -145,20 +148,93 @@ function requirePlayerName() {
   return name;
 }
 
+// ---------- Level-System (10 Sterne pro Level, 100 Level = 1000 Sterne) ----------
+const LEVEL_TIERS = [
+  "Mathe-Neuling",
+  "Zahlen-Lehrling",
+  "Term-Entdecker",
+  "Gleichungs-Kenner",
+  "Bruch-Profi",
+  "Geometrie-Ass",
+  "Rechen-Champion",
+  "Mathe-Experte",
+  "Zahlen-Meister",
+  "Mathe-Genie",
+];
+const STARS_PER_LEVEL = 10;
+const MAX_LEVEL = 100;
+
+function getLevelInfo(totalStars) {
+  const stars = Math.max(0, totalStars);
+  const level = Math.min(MAX_LEVEL, Math.floor(stars / STARS_PER_LEVEL) + 1);
+  const tierIndex = Math.min(LEVEL_TIERS.length - 1, Math.floor((level - 1) / 10));
+  const isMaxLevel = level >= MAX_LEVEL;
+  const starsIntoLevel = stars - (level - 1) * STARS_PER_LEVEL;
+  return {
+    level,
+    title: LEVEL_TIERS[tierIndex],
+    isMaxLevel,
+    starsToNext: isMaxLevel ? 0 : STARS_PER_LEVEL - starsIntoLevel,
+    progressPercent: isMaxLevel ? 100 : Math.round((starsIntoLevel / STARS_PER_LEVEL) * 100),
+  };
+}
+
+function renderLevelInfo(totalStars) {
+  const info = getLevelInfo(totalStars);
+  document.getElementById("level-title").textContent = `Level ${info.level} – ${info.title}`;
+  document.getElementById("level-progress-fill").style.width = `${info.progressPercent}%`;
+  document.getElementById("level-next").textContent = info.isMaxLevel
+    ? "Höchstes Level erreicht!"
+    : `Noch ${info.starsToNext} ⭐ bis Level ${info.level + 1}`;
+  document.getElementById("level-info").classList.remove("hidden");
+  return info;
+}
+
+function launchConfetti() {
+  const container = document.getElementById("confetti-container");
+  const colors = ["#f94144", "#f3722c", "#f9c74f", "#90be6d", "#577590", "#277da1"];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = `${1.5 + Math.random() * 1.5}s`;
+    piece.style.animationDelay = `${Math.random() * 0.3}s`;
+    piece.addEventListener("animationend", () => piece.remove());
+    container.appendChild(piece);
+  }
+}
+
+function showLevelUpCelebration(info) {
+  document.getElementById("level-up-message").textContent = `Dein neuer Level ist: ${info.level} – ${info.title}`;
+  document.getElementById("level-up-overlay").classList.remove("hidden");
+  launchConfetti();
+}
+
+document.getElementById("btn-level-up-close").addEventListener("click", () => {
+  document.getElementById("level-up-overlay").classList.add("hidden");
+  document.getElementById("confetti-container").innerHTML = "";
+});
+
+let currentTotalStars = 0;
+
 async function refreshStarsTotal() {
   const starsEl = document.getElementById("stars-total");
   if (!state.playerName) {
     starsEl.classList.add("hidden");
+    document.getElementById("level-info").classList.add("hidden");
     return;
   }
   const { ok, data } = await api(`/api/results?playerName=${encodeURIComponent(state.playerName)}`);
   if (!ok || !Array.isArray(data)) {
     starsEl.classList.add("hidden");
+    document.getElementById("level-info").classList.add("hidden");
     return;
   }
-  const total = data.reduce((sum, r) => sum + (r.stars || 0), 0);
-  starsEl.textContent = `⭐ Gesammelte Sterne: ${total}`;
+  currentTotalStars = data.reduce((sum, r) => sum + (r.stars || 0), 0);
+  starsEl.textContent = `⭐ Gesammelte Sterne: ${currentTotalStars}`;
   starsEl.classList.remove("hidden");
+  renderLevelInfo(currentTotalStars);
 }
 
 // ---------- Metadaten (Jahre/Kategorien) laden ----------
@@ -299,6 +375,7 @@ function startTaskFlow(queue) {
   state.queue = queue;
   state.currentIndex = 0;
   state.results = [];
+  state.starsBeforeRun = currentTotalStars;
   showScreen("screen-task");
   loadCurrentTask();
 }
@@ -332,7 +409,42 @@ function loadCurrentTask() {
   statusEl.textContent = "";
   submitBtn.classList.remove("hidden");
   nextBtn.classList.add("hidden");
+
+  state.nextHintIndex = 0;
+  state.hintsUsedForCurrent = false;
+  const hintBtn = document.getElementById("hint-btn");
+  hintBtn.disabled = false;
+  hintBtn.textContent = "💡 Hinweis";
+  const hintBox = document.getElementById("hint-box");
+  hintBox.textContent = "";
+  hintBox.classList.add("hidden");
 }
+
+document.getElementById("hint-btn").addEventListener("click", async () => {
+  const problem = state.queue[state.currentIndex];
+  const hintBtn = document.getElementById("hint-btn");
+  const hintBox = document.getElementById("hint-box");
+
+  const { ok, data } = await api(
+    `/api/hint?problemId=${encodeURIComponent(problem.id)}&index=${state.nextHintIndex}`
+  );
+  if (!ok) {
+    hintBox.textContent = `Fehler: ${data.error || "Hinweis konnte nicht geladen werden."}`;
+    hintBox.classList.remove("hidden");
+    return;
+  }
+
+  state.hintsUsedForCurrent = true;
+  hintBox.textContent = data.totalHints > 0 ? `Hinweis ${data.hintIndex + 1}/${data.totalHints}: ${data.hint}` : data.hint;
+  hintBox.classList.remove("hidden");
+
+  if (data.hasMore) {
+    state.nextHintIndex = data.hintIndex + 1;
+  } else {
+    hintBtn.disabled = true;
+    hintBtn.textContent = "💡 Keine weiteren Hinweise";
+  }
+});
 
 submitBtn.addEventListener("click", async () => {
   const problem = state.queue[state.currentIndex];
@@ -346,7 +458,7 @@ submitBtn.addEventListener("click", async () => {
     const { ok, data } = await api("/api/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemId: problem.id, image }),
+      body: JSON.stringify({ problemId: problem.id, image, hintsUsed: state.hintsUsedForCurrent }),
     });
     if (!ok) {
       statusEl.textContent = `Fehler: ${data.error || "unbekannt"}`;
@@ -356,7 +468,9 @@ submitBtn.addEventListener("click", async () => {
     renderMath(document.getElementById("result-latex-rendered"), data.latex, data.transcription);
 
     const badgeEl = document.getElementById("result-correct");
-    if (data.correct) {
+    if (data.hintsUsed) {
+      badgeEl.textContent = `💡 Hinweise verwendet (0 / ${data.points} Punkte)`;
+    } else if (data.correct) {
       badgeEl.innerHTML = `Richtig ✅ (${data.awarded} / ${data.points} Punkte) <span class="star-earned">⭐</span>`;
     } else if (data.awarded > 0) {
       badgeEl.textContent = `Teilweise richtig 🌗 (${data.awarded} / ${data.points} Punkte)`;
@@ -413,6 +527,13 @@ async function finishRun() {
     `${fullyCorrectCount} von ${state.results.length} Aufgaben vollständig richtig`;
   document.getElementById("summary-stars").textContent = "⭐".repeat(fullyCorrectCount) || "–";
   showScreen("screen-summary");
+
+  const levelBefore = getLevelInfo(state.starsBeforeRun || 0);
+  await refreshStarsTotal();
+  const levelAfter = getLevelInfo(currentTotalStars);
+  if (levelAfter.level > levelBefore.level) {
+    showLevelUpCelebration(levelAfter);
+  }
 }
 
 document.getElementById("btn-summary-restart").addEventListener("click", goToStart);
