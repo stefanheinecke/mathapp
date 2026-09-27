@@ -134,8 +134,10 @@ app.post("/api/evaluate", async (req, res) => {
             "Zwischenschritte fuer sich mathematisch korrekt sind (sonst false). Wenn hasCalculationPath=false, " +
             "setze pathCorrect auf false.\n" +
             "C) resultCorrect: true, wenn das hingeschriebene (oder aus dem letzten Schritt hervorgehende) " +
-            "Endergebnis inhaltlich mit der Musterloesung uebereinstimmt. Aequivalente Formen (z.B. " +
-            "gekuerzte/ungekuerzte Brueche, Dezimalzahlen) zaehlen als richtig.\n\n" +
+            "Endergebnis inhaltlich mit der Musterloesung uebereinstimmt. Aequivalente Formen zaehlen als " +
+            "richtig, z.B. gekuerzte/ungekuerzte Brueche, verschiedene Wurzel-Schreibweisen (sqrt(72), 6*sqrt(2) " +
+            "und die gerundete Dezimalzahl 8.485 sind alle gleichwertig) sowie sinnvoll gerundete " +
+            "Dezimalnaeherungen allgemein.\n\n" +
             "Antworte AUSSCHLIESSLICH mit kompaktem JSON, GENAU in dieser Schluesselreihenfolge: " +
             '{"steps": [{"step": string, "valid": boolean, "check": string}], "transcription": string, ' +
             '"hasCalculationPath": boolean, "pathCorrect": boolean, "resultCorrect": boolean, "feedback": string}. ' +

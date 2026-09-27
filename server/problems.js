@@ -11,7 +11,7 @@
 const RAW_PROBLEMS = [
   {
     id: "2026-1a1",
-    latex: "\\text{Vereinfache die Terme soweit wie möglich: } \\dfrac{3x}{4}\\cdot\\dfrac{2}{9}\\div\\dfrac{x}{2}",
+    latex: "\\text{Vereinfache die Terme soweit wie möglich: } \\dfrac{3x}{4}\\cdot\\dfrac{2}{9}:\\dfrac{x}{2}",
     answer: "x = 1/3",
     year: 2026,
     category: "Gleichung",
@@ -19,7 +19,7 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-1a2",
-    latex: "\\text{Vereinfache die Terme soweit wie möglich: } 8xy - 6x^2y \\div (3x)",
+    latex: "\\text{Vereinfache die Terme soweit wie möglich: } 8xy - 6x^2y : (3x)",
     answer: "6𝑥𝑦",
     year: 2026,
     category: "Termumformung",
@@ -54,10 +54,27 @@ const RAW_PROBLEMS = [
     id: "2026-1e",
     text: "Das linke Zahnrad im Bild hat 10 Zähne. Das rechte Zahnrad hat 12 Zähne. Berechne, wie oft sich das linke Zahnrad drehen muss, bis beide Zahnräder zum ersten Mal wieder in der unten abgebildeten Position sind.",
     latex: "\\text{Das linke Zahnrad im Bild hat 10 Zähne. Das rechte Zahnrad hat 12 Zähne. Berechne, wie oft sich das linke Zahnrad drehen muss, bis beide Zahnräder zum ersten Mal wieder in der unten abgebildeten Position sind.}",
-    images: ["/images/problem1e.png"],
+    images: ["/images/problem-2026-1e.png"],
     answer: "6",
     year: 2026,
     category: "Textaufgabe",
+    points: 1,
+  },
+  {
+    id: "2026-1f",
+    latex: "Wandle in ml um: 2.3 dm^3",
+    answer: "2300 ml",
+    year: 2026,
+    category: "Grössenumrechnungen",
+    points: 1,
+  },
+  {
+    id: "2026-1g",
+    latex: "Berechne x:",
+    images: ["/images/problem-2026-1g.png"],
+    answer: "x = √72 = 6√2 ≈ 8.485",
+    year: 2026,
+    category: "Geometrie",
     points: 1,
   },
 ];
