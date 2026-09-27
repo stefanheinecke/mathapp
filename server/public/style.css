@@ -8,12 +8,56 @@ body {
   background: #f4f4f4;
   color: #222;
   margin: 0;
-  padding: 2rem;
+  padding: 0;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  flex: 0 0 220px;
+  background: #fff;
+  border-right: 1px solid #ddd;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+}
+
+.sidebar h1 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.nav-btn {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  background: #f0f0f0;
+}
+
+.nav-btn.active {
+  background: var(--ink);
+  color: #fff;
 }
 
 main {
+  flex: 1;
   max-width: 900px;
-  margin: 0 auto;
+  padding: 2rem;
 }
 
 h1 {
@@ -27,6 +71,20 @@ h1 {
   padding: 0.75rem 1rem;
   border-radius: 6px;
   border: 1px solid #ddd;
+}
+
+.problem-images {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.problem-images img {
+  max-width: 280px;
+  max-height: 280px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
 }
 
 .canvas-wrap {

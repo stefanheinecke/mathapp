@@ -66,6 +66,31 @@ function showScreen(id) {
   document.getElementById(id).classList.remove("hidden");
 }
 
+function setActiveNav(navId) {
+  document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.id === navId));
+}
+
+// Fragt nach, wenn man mitten in einer laufenden Aufgabe/Pruefung wegnavigiert (Fortschritt geht verloren).
+function confirmLeaveTask() {
+  const taskScreenVisible = !document.getElementById("screen-task").classList.contains("hidden");
+  if (!taskScreenVisible) return true;
+  return confirm("Dein aktueller Fortschritt in dieser Aufgabe/Prüfung geht verloren. Trotzdem fortfahren?");
+}
+
+// Rendert LaTeX (Bruchstriche, Wurzeln, Hochzahlen, ...) in ein Element; faellt bei fehlendem
+// LaTeX oder Rendering-Fehlern auf reinen Text zurueck.
+function renderMath(el, latex, fallbackText) {
+  if (!latex) {
+    el.textContent = fallbackText || "";
+    return;
+  }
+  try {
+    window.katex.render(latex, el, { throwOnError: false, displayMode: false });
+  } catch {
+    el.textContent = fallbackText || latex;
+  }
+}
+
 // ---------- App-Zustand ----------
 const state = {
   playerName: localStorage.getItem("matheapp_playerName") || "",
@@ -147,20 +172,31 @@ async function loadUebungProblems() {
     return;
   }
   select.innerHTML = data
-    .map((p) => `<option value="${p.id}">[${p.year} · ${p.category}] ${p.text}</option>`)
+    .map((p) => `<option value="${p.id}">[${p.year} · ${p.category} · ${p.points} P.] ${p.text}</option>`)
     .join("");
   state.uebungProblems = data;
 }
 
-document.getElementById("btn-mode-uebung").addEventListener("click", async () => {
+async function goToStart() {
+  if (!confirmLeaveTask()) return;
+  setActiveNav("nav-start");
+  showScreen("screen-start");
+  await refreshStarsTotal();
+}
+
+async function goToUebung() {
   if (!requirePlayerName()) return;
+  if (!confirmLeaveTask()) return;
+  setActiveNav("nav-uebung");
   showScreen("screen-uebung-setup");
   await loadUebungProblems();
-});
+}
+
+document.getElementById("nav-start").addEventListener("click", goToStart);
+document.getElementById("nav-uebung").addEventListener("click", goToUebung);
 
 document.getElementById("uebung-year").addEventListener("change", loadUebungProblems);
 document.getElementById("uebung-category").addEventListener("change", loadUebungProblems);
-document.getElementById("btn-uebung-back").addEventListener("click", () => showScreen("screen-start"));
 
 document.getElementById("btn-uebung-start").addEventListener("click", () => {
   const select = document.getElementById("uebung-problem");
@@ -187,20 +223,23 @@ function selectPruefungVariant(variant) {
   document.getElementById("btn-pruefung-start").classList.remove("hidden");
 }
 
-document.getElementById("btn-mode-pruefung").addEventListener("click", () => {
+async function goToPruefungSetup() {
   if (!requirePlayerName()) return;
+  if (!confirmLeaveTask()) return;
   pruefungVariant = null;
   document.getElementById("btn-pruefung-jahr").classList.remove("active");
   document.getElementById("btn-pruefung-kategorie").classList.remove("active");
   document.getElementById("pruefung-jahr-picker").classList.add("hidden");
   document.getElementById("pruefung-kategorie-picker").classList.add("hidden");
   document.getElementById("btn-pruefung-start").classList.add("hidden");
+  setActiveNav("nav-pruefung");
   showScreen("screen-pruefung-setup");
-});
+}
+
+document.getElementById("nav-pruefung").addEventListener("click", goToPruefungSetup);
 
 document.getElementById("btn-pruefung-jahr").addEventListener("click", () => selectPruefungVariant("jahr"));
 document.getElementById("btn-pruefung-kategorie").addEventListener("click", () => selectPruefungVariant("kategorie"));
-document.getElementById("btn-pruefung-back").addEventListener("click", () => showScreen("screen-start"));
 
 document.getElementById("btn-pruefung-start").addEventListener("click", async () => {
   if (pruefungVariant === "jahr") {
@@ -236,6 +275,18 @@ function startTaskFlow(queue) {
   loadCurrentTask();
 }
 
+// Zeigt optionale Zusatzbilder einer Aufgabe (z.B. Geometriefiguren) unter dem Aufgabentext.
+function renderProblemImages(images) {
+  const container = document.getElementById("problem-images");
+  container.innerHTML = "";
+  (images || []).forEach((src) => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Aufgaben-Abbildung";
+    container.appendChild(img);
+  });
+}
+
 function loadCurrentTask() {
   const problem = state.queue[state.currentIndex];
   const progressEl = document.getElementById("task-progress");
@@ -245,7 +296,9 @@ function loadCurrentTask() {
   } else {
     progressEl.classList.add("hidden");
   }
-  document.getElementById("problem-text").textContent = problem.text;
+  document.getElementById("problem-text").innerHTML = "";
+  renderMath(document.getElementById("problem-text"), problem.latex, problem.text);
+  renderProblemImages(problem.images);
   clearCanvas();
   resultEl.classList.add("hidden");
   statusEl.textContent = "";
@@ -272,15 +325,26 @@ submitBtn.addEventListener("click", async () => {
       return;
     }
     document.getElementById("result-transcription").textContent = data.transcription || "(nichts erkannt)";
-    document.getElementById("result-latex").textContent = data.latex || "(nichts erkannt)";
-    document.getElementById("result-correct").innerHTML = data.correct
-      ? 'Richtig ✅ <span class="star-earned">⭐</span>'
-      : "Nicht korrekt ❌";
+    renderMath(document.getElementById("result-latex-rendered"), data.latex, data.transcription);
+
+    const badgeEl = document.getElementById("result-correct");
+    if (data.correct) {
+      badgeEl.innerHTML = `Richtig ✅ (${data.awarded} / ${data.points} Punkte) <span class="star-earned">⭐</span>`;
+    } else if (data.awarded > 0) {
+      badgeEl.textContent = `Teilweise richtig 🌗 (${data.awarded} / ${data.points} Punkte)`;
+    } else {
+      badgeEl.textContent = `Nicht korrekt ❌ (0 / ${data.points} Punkte)`;
+    }
     document.getElementById("result-feedback").textContent = data.feedback || "";
     resultEl.classList.remove("hidden");
     statusEl.textContent = "";
 
-    state.results.push({ problemId: problem.id, correct: Boolean(data.correct) });
+    state.results.push({
+      problemId: problem.id,
+      points: data.points,
+      awarded: data.awarded,
+      fullyCorrect: Boolean(data.correct),
+    });
     submitBtn.classList.add("hidden");
     nextBtn.classList.remove("hidden");
   } catch (err) {
@@ -300,9 +364,10 @@ nextBtn.addEventListener("click", () => {
 });
 
 async function finishRun() {
-  const total = state.results.length;
-  const correct = state.results.filter((r) => r.correct).length;
-  const percent = total > 0 ? Math.round((correct / total) * 1000) / 10 : 0;
+  const totalPoints = state.results.reduce((sum, r) => sum + r.points, 0);
+  const awardedPoints = state.results.reduce((sum, r) => sum + r.awarded, 0);
+  const fullyCorrectCount = state.results.filter((r) => r.fullyCorrect).length;
+  const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
 
   await api("/api/results", {
     method: "POST",
@@ -315,19 +380,20 @@ async function finishRun() {
     }),
   });
 
-  document.getElementById("summary-score").textContent = `${correct} von ${total} richtig (${percent}%)`;
-  document.getElementById("summary-stars").textContent = "⭐".repeat(correct) || "–";
+  document.getElementById("summary-score").textContent =
+    `${awardedPoints} von ${totalPoints} Punkten (${percent}%) – ` +
+    `${fullyCorrectCount} von ${state.results.length} Aufgaben vollständig richtig`;
+  document.getElementById("summary-stars").textContent = "⭐".repeat(fullyCorrectCount) || "–";
   showScreen("screen-summary");
 }
 
-document.getElementById("btn-summary-restart").addEventListener("click", async () => {
-  showScreen("screen-start");
-  await refreshStarsTotal();
-});
+document.getElementById("btn-summary-restart").addEventListener("click", goToStart);
 
 // ---------- Verlauf ----------
-document.getElementById("btn-mode-history").addEventListener("click", async () => {
+async function goToHistory() {
   if (!requirePlayerName()) return;
+  if (!confirmLeaveTask()) return;
+  setActiveNav("nav-history");
   showScreen("screen-history");
   const listEl = document.getElementById("history-list");
   listEl.textContent = "Lade ...";
@@ -343,19 +409,19 @@ document.getElementById("btn-mode-history").addEventListener("click", async () =
         <td>${new Date(r.created_at).toLocaleString("de-CH")}</td>
         <td>${modeLabels[r.mode] || r.mode}</td>
         <td>${r.scope}</td>
-        <td>${r.correct} / ${r.total}</td>
+        <td>${r.awarded_points} / ${r.total_points} Punkte</td>
         <td>${r.percent}%</td>
         <td>${"⭐".repeat(r.stars)}</td>
       </tr>`
     )
     .join("");
   listEl.innerHTML = `<table>
-    <thead><tr><th>Datum</th><th>Modus</th><th>Bereich</th><th>Ergebnis</th><th>Prozent</th><th>Sterne</th></tr></thead>
+    <thead><tr><th>Datum</th><th>Modus</th><th>Bereich</th><th>Punkte</th><th>Prozent</th><th>Sterne</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
-});
+}
 
-document.getElementById("btn-history-back").addEventListener("click", () => showScreen("screen-start"));
+document.getElementById("nav-history").addEventListener("click", goToHistory);
 
 // ---------- Initialisierung ----------
 loadMeta();

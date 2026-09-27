@@ -5,22 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mathe-Uebung Prototyp</title>
   <link rel="stylesheet" href="style.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/katex@0.18.9/dist/katex.min.css"
+    integrity="sha384-lPx0C4zIUZLpveABMwOFcFeGZwsvKBJfhJ85FN1PYOV7xApBcFMhcAEMVKF8loOI"
+    crossorigin="anonymous"
+  />
 </head>
 <body>
-  <main>
-    <h1>Mathe-Uebung: Prototyp</h1>
+  <div class="app-layout">
+    <nav class="sidebar">
+      <h1>Mathe-Übung</h1>
+      <button id="nav-start" class="nav-btn active">🏠 Start</button>
+      <button id="nav-uebung" class="nav-btn">📖 Übungsmodus</button>
+      <button id="nav-pruefung" class="nav-btn">📝 Prüfungsmodus</button>
+      <button id="nav-history" class="nav-btn">📊 Meine Ergebnisse</button>
+      <p id="stars-total" class="stars-total hidden"></p>
+    </nav>
 
-    <!-- Startbildschirm: Name eingeben, Modus waehlen -->
+    <main>
+    <!-- Startbildschirm: Name eingeben -->
     <section id="screen-start" class="screen">
+      <h2>Willkommen!</h2>
       <label for="player-name">Dein Name:</label>
       <input id="player-name" type="text" maxlength="60" placeholder="z.B. Alex" />
-      <p id="stars-total" class="stars-total hidden"></p>
-
-      <div class="mode-buttons">
-        <button id="btn-mode-uebung">📖 Übungsmodus</button>
-        <button id="btn-mode-pruefung">📝 Prüfungsmodus</button>
-        <button id="btn-mode-history">📊 Meine Ergebnisse</button>
-      </div>
+      <p>Wähle links einen Modus, um loszulegen.</p>
     </section>
 
     <!-- Uebungsmodus: Aufgabe nach Jahr/Kategorie auswaehlen -->
@@ -36,7 +45,6 @@
       <select id="uebung-problem"></select>
 
       <div class="toolbar">
-        <button id="btn-uebung-back" class="btn-secondary">Zurück</button>
         <button id="btn-uebung-start">Starten</button>
       </div>
     </section>
@@ -60,7 +68,6 @@
       </div>
 
       <div class="toolbar">
-        <button id="btn-pruefung-back" class="btn-secondary">Zurück</button>
         <button id="btn-pruefung-start" class="hidden">Prüfung starten</button>
       </div>
     </section>
@@ -69,6 +76,7 @@
     <section id="screen-task" class="screen hidden">
       <p id="task-progress" class="task-progress hidden"></p>
       <p id="problem-text" class="problem-text"></p>
+      <div id="problem-images" class="problem-images"></div>
 
       <section class="canvas-wrap">
         <canvas id="notebook" width="800" height="500"></canvas>
@@ -81,7 +89,8 @@
       <section id="result" class="result hidden">
         <h2>Ergebnis</h2>
         <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
-        <p><strong>Erkanntes LaTeX (MathPix):</strong> <span id="result-latex"></span></p>
+        <p><strong>Deine Lösung (erkannt):</strong></p>
+        <div id="result-latex-rendered"></div>
         <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
         <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
         <button id="btn-next">Weiter</button>
@@ -104,12 +113,15 @@
     <section id="screen-history" class="screen hidden">
       <h2>Meine Ergebnisse</h2>
       <div id="history-list"></div>
-      <div class="toolbar">
-        <button id="btn-history-back" class="btn-secondary">Zurück</button>
-      </div>
     </section>
-  </main>
+    </main>
+  </div>
 
+  <script
+    src="https://cdn.jsdelivr.net/npm/katex@0.18.9/dist/katex.min.js"
+    integrity="sha384-19KE2cFb3U+RUWmyhBz7aLOGDG8WrRC6hE3oY/HTZZlAAVWYTdmvLC//+TIV3zUx"
+    crossorigin="anonymous"
+  ></script>
   <script src="app.js"></script>
 </body>
 </html>

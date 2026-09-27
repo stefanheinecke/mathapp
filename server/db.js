@@ -30,27 +30,34 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // Nachtraeglich hinzugefuegte Spalten fuer die punktebasierte Bewertung (idempotent, auch fuer
+  // bereits bestehende Tabellen aus frueheren Versionen des Prototyps).
+  await pool.query(`ALTER TABLE results ADD COLUMN IF NOT EXISTS total_points NUMERIC NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE results ADD COLUMN IF NOT EXISTS awarded_points NUMERIC NOT NULL DEFAULT 0;`);
 }
 
 // Speichert einen abgeschlossenen Lauf (ein Uebungs-Ergebnis oder eine ganze Pruefung).
+// details: [{ problemId, points, awarded, fullyCorrect }]
 export async function saveResult({ playerName, mode, scope, details }) {
   const total = details.length;
-  const correct = details.filter((d) => d.correct).length;
-  const percent = total > 0 ? Math.round((correct / total) * 1000) / 10 : 0;
-  const stars = correct; // 1 Stern pro richtig geloester Aufgabe
+  const correct = details.filter((d) => d.fullyCorrect).length;
+  const totalPoints = details.reduce((sum, d) => sum + d.points, 0);
+  const awardedPoints = details.reduce((sum, d) => sum + d.awarded, 0);
+  const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
+  const stars = correct; // 1 Stern pro vollstaendig richtig geloester Aufgabe
 
   const { rows } = await pool.query(
-    `INSERT INTO results (player_name, mode, scope, total, correct, percent, stars, details)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING id, player_name, mode, scope, total, correct, percent, stars, details, created_at`,
-    [playerName, mode, scope, total, correct, percent, stars, JSON.stringify(details)]
+    `INSERT INTO results (player_name, mode, scope, total, correct, percent, stars, details, total_points, awarded_points)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id, player_name, mode, scope, total, correct, percent, stars, details, total_points, awarded_points, created_at`,
+    [playerName, mode, scope, total, correct, percent, stars, JSON.stringify(details), totalPoints, awardedPoints]
   );
   return rows[0];
 }
 
 export async function getResultsForPlayer(playerName) {
   const { rows } = await pool.query(
-    `SELECT id, player_name, mode, scope, total, correct, percent, stars, details, created_at
+    `SELECT id, player_name, mode, scope, total, correct, percent, stars, details, total_points, awarded_points, created_at
      FROM results WHERE player_name = $1 ORDER BY created_at DESC LIMIT 50`,
     [playerName]
   );

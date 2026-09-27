@@ -67,7 +67,17 @@ app.get("/api/meta", (_req, res) => {
 app.get("/api/problems", (req, res) => {
   const { year, category } = req.query;
   const filtered = filterProblems({ year, category });
-  res.json(filtered.map(({ id, text, year, category }) => ({ id, text, year, category })));
+  res.json(
+    filtered.map(({ id, text, latex, images, year, category, points }) => ({
+      id,
+      text,
+      latex,
+      images,
+      year,
+      category,
+      points,
+    }))
+  );
 });
 
 app.post("/api/evaluate", async (req, res) => {
@@ -115,17 +125,21 @@ app.post("/api/evaluate", async (req, res) => {
             "werden, der Folgeschritt muss also 3x = 15 lauten; 3x = 12 waere falsch, weil 20 - 5 nicht 12 ist).\n" +
             "3. Ein Rechenweg darf von der Musterloesung abweichen (andere gleichwertige Loesungsstrategie), " +
             "aber JEDER einzelne Schritt muss fuer sich mathematisch korrekt sein.\n" +
-            "4. Wenn irgendein Schritt einen Rechen- oder Umformungsfehler enthaelt, ist die Aufgabe NICHT " +
-            "korrekt geloest, selbst wenn ein spaeter hingeschriebenes Endergebnis zufaellig mit der " +
-            "Musterloesung uebereinstimmt.\n" +
-            "5. Aequivalente Endergebnis-Formen (z.B. gekuerzte/ungekuerzte Brueche, Dezimalzahlen) zaehlen " +
-            "als richtig, sofern der Rechenweg dorthin fehlerfrei ist.\n" +
-            "6. Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann.\n\n" +
+            "4. Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann.\n\n" +
+            "Bewerte ZWEI Dinge GETRENNT voneinander:\n" +
+            "A) hasCalculationPath: true, wenn mehr zu sehen ist als nur das nackte Endergebnis (also " +
+            "mindestens ein Zwischenschritt/Rechenweg erkennbar ist). false, wenn nur das Endergebnis " +
+            "hingeschrieben wurde, ohne jeden Loesungsweg.\n" +
+            "B) pathCorrect: nur relevant wenn hasCalculationPath=true. true, wenn ALLE gezeigten " +
+            "Zwischenschritte fuer sich mathematisch korrekt sind (sonst false). Wenn hasCalculationPath=false, " +
+            "setze pathCorrect auf false.\n" +
+            "C) resultCorrect: true, wenn das hingeschriebene (oder aus dem letzten Schritt hervorgehende) " +
+            "Endergebnis inhaltlich mit der Musterloesung uebereinstimmt. Aequivalente Formen (z.B. " +
+            "gekuerzte/ungekuerzte Brueche, Dezimalzahlen) zaehlen als richtig.\n\n" +
             "Antworte AUSSCHLIESSLICH mit kompaktem JSON, GENAU in dieser Schluesselreihenfolge: " +
             '{"steps": [{"step": string, "valid": boolean, "check": string}], "transcription": string, ' +
-            '"correct": boolean, "feedback": string}. ' +
+            '"hasCalculationPath": boolean, "pathCorrect": boolean, "resultCorrect": boolean, "feedback": string}. ' +
             "Das Feld \"check\" enthaelt die nachgerechnete Arithmetik (z.B. \"20 - 5 = 15, nicht 12\"). " +
-            '"correct" muss false sein, sobald mindestens ein Eintrag in "steps" valid=false hat. ' +
             "Das feedback ist kurz (1-2 Saetze), auf Deutsch, freundlich und konkret. Wenn ein " +
             "Zwischenschritt falsch ist, benenne genau diesen Schritt und den Fehler im feedback.",
         },
@@ -153,21 +167,48 @@ app.post("/api/evaluate", async (req, res) => {
 
     const steps = Array.isArray(result.steps) ? result.steps : [];
     const hasInvalidStep = steps.some((s) => s && s.valid === false);
+    const hasPath = Boolean(result.hasCalculationPath);
+    const resultCorrect = Boolean(result.resultCorrect);
     // Serverseitiges Sicherheitsnetz: ein als falsch erkannter Schritt (LLM) oder ein deterministisch
-    // nachgerechneter Widerspruch (mathjs) macht die Aufgabe immer falsch, unabhaengig davon, was das
-    // Modell im obersten "correct"-Feld behauptet.
-    const correct = Boolean(result.correct) && !hasInvalidStep && deterministic.ok;
-    const feedback =
-      deterministic.problems.length > 0
-        ? `${result.feedback ?? ""} (Automatische Nachrechnung: ${deterministic.problems.join(" ")})`.trim()
-        : result.feedback ?? "";
+    // nachgerechneter Widerspruch (mathjs) macht den Rechenweg immer falsch, unabhaengig davon, was das
+    // Modell im "pathCorrect"-Feld behauptet.
+    const pathCorrect = hasPath && Boolean(result.pathCorrect) && !hasInvalidStep && deterministic.ok;
+
+    // Punktevergabe: voller Punkt nur bei korrektem Weg UND korrektem Ergebnis. Ein erkennbar
+    // FALSCHER Rechenweg gibt immer 0 Punkte, auch wenn zufaellig das richtige Endergebnis dasteht.
+    // Fehlt der Rechenweg komplett oder fehlt/ist das Endergebnis falsch, gibt es je einen halben Punkt
+    // fuer die jeweils andere korrekte Haelfte (nur Ergebnis bzw. nur Weg).
+    const points = typeof problem.points === "number" ? problem.points : 1;
+    const pathState = !hasPath ? "missing" : pathCorrect ? "correct" : "incorrect";
+    let awarded;
+    if (pathState === "incorrect") {
+      awarded = 0;
+    } else if (pathState === "correct") {
+      awarded = resultCorrect ? points : points / 2;
+    } else {
+      // pathState === "missing"
+      awarded = resultCorrect ? points / 2 : 0;
+    }
+    const fullyCorrect = awarded === points;
+
+    const notes = [...deterministic.problems];
+    if (pathState === "missing" && resultCorrect) {
+      notes.push("Kein Rechenweg erkennbar, nur das Endergebnis \u2013 daher gibt es einen halben Punkt.");
+    } else if (pathState === "correct" && !resultCorrect) {
+      notes.push("Der Rechenweg ist korrekt, aber das Endergebnis fehlt oder stimmt nicht \u2013 daher gibt es einen halben Punkt.");
+    }
+    const feedback = notes.length > 0 ? `${result.feedback ?? ""} (${notes.join(" ")})`.trim() : result.feedback ?? "";
 
     res.json({
       transcription: result.transcription || recognized.text,
       latex: recognized.latex,
       steps,
       deterministicCheck: deterministic,
-      correct,
+      pathState,
+      resultCorrect,
+      points,
+      awarded,
+      correct: fullyCorrect,
       feedback,
     });
   } catch (err) {
@@ -196,9 +237,21 @@ app.post("/api/results", async (req, res) => {
     if (
       !Array.isArray(details) ||
       details.length === 0 ||
-      !details.every((d) => d && typeof d.problemId === "string" && typeof d.correct === "boolean")
+      !details.every(
+        (d) =>
+          d &&
+          typeof d.problemId === "string" &&
+          typeof d.points === "number" &&
+          d.points >= 0 &&
+          typeof d.awarded === "number" &&
+          d.awarded >= 0 &&
+          d.awarded <= d.points + 1e-9 &&
+          typeof d.fullyCorrect === "boolean"
+      )
     ) {
-      return res.status(400).json({ error: "details muss ein nicht-leeres Array aus {problemId, correct} sein." });
+      return res
+        .status(400)
+        .json({ error: "details muss ein nicht-leeres Array aus {problemId, points, awarded, fullyCorrect} sein." });
     }
 
     const saved = await saveResult({ playerName: playerName.trim(), mode, scope, details });
