@@ -1,9 +1,12 @@
 // ---------- Canvas (kariertes Notizfeld) ----------
 const canvas = document.getElementById("notebook");
 const ctx = canvas.getContext("2d");
-ctx.lineWidth = 2.5;
 ctx.lineCap = "round";
 ctx.strokeStyle = "#1a3a8f";
+
+const PEN_WIDTH = 2.5;
+const ERASER_WIDTH = 24;
+let currentTool = "pen"; // 'pen' | 'eraser'
 
 let drawing = false;
 let lastX = 0;
@@ -16,8 +19,26 @@ function getPos(evt) {
   return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
 }
 
+function setTool(tool) {
+  currentTool = tool;
+  document.getElementById("tool-pen").classList.toggle("active", tool === "pen");
+  document.getElementById("tool-eraser").classList.toggle("active", tool === "eraser");
+}
+
+document.getElementById("tool-pen").addEventListener("click", () => setTool("pen"));
+document.getElementById("tool-eraser").addEventListener("click", () => setTool("eraser"));
+
 function startDraw(evt) {
   drawing = true;
+  // "destination-out" macht die uebermalten Pixel transparent statt sie einzufaerben - so
+  // radiert der Radierer nur das Geschriebene weg, das karierte CSS-Hintergrundmuster bleibt sichtbar.
+  if (currentTool === "eraser") {
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.lineWidth = ERASER_WIDTH;
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.lineWidth = PEN_WIDTH;
+  }
   const pos = getPos(evt);
   lastX = pos.x;
   lastY = pos.y;
@@ -216,6 +237,114 @@ document.getElementById("btn-level-up-close").addEventListener("click", () => {
   document.getElementById("confetti-container").innerHTML = "";
 });
 
+// ---------- Bonus-Merkspiel (nur Uebungsmodus, nach richtig geloester Aufgabe) ----------
+const MINIGAME_TIME_LIMIT_SECONDS = 30;
+const MINIGAME_CARD_BACK = "🎴";
+const MINIGAME_SYMBOLS = ["🐶", "🐱", "🐭", "🐰", "🦊", "🐻", "🐯", "🐨"];
+
+function shuffle(array) {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+// Oeffnet das 4x4-Merkspiel. onComplete(won) wird genau einmal aufgerufen, sobald das Spiel
+// endet (gewonnen, Zeit abgelaufen oder manuell geschlossen).
+function openMemoryGame(onComplete) {
+  const overlay = document.getElementById("minigame-overlay");
+  const grid = document.getElementById("minigame-grid");
+  const timerEl = document.getElementById("minigame-timer");
+  const resultEl2 = document.getElementById("minigame-result");
+  const closeBtn = document.getElementById("btn-minigame-close");
+
+  const deck = shuffle([...MINIGAME_SYMBOLS, ...MINIGAME_SYMBOLS]);
+  let flipped = [];
+  let matchedCount = 0;
+  let locked = false;
+  let finished = false;
+  let timeLeft = MINIGAME_TIME_LIMIT_SECONDS;
+
+  grid.innerHTML = "";
+  resultEl2.classList.add("hidden");
+  resultEl2.textContent = "";
+  timerEl.textContent = `⏱ ${timeLeft}s`;
+  timerEl.classList.remove("low");
+  overlay.classList.remove("hidden");
+
+  const cards = deck.map((symbol, index) => {
+    const card = document.createElement("button");
+    card.className = "minigame-card";
+    card.type = "button";
+    card.textContent = MINIGAME_CARD_BACK;
+    card.addEventListener("click", () => handleCardClick(index));
+    grid.appendChild(card);
+    return { symbol, el: card, matched: false };
+  });
+
+  function finish(won) {
+    if (finished) return;
+    finished = true;
+    clearInterval(timerHandle);
+    cards.forEach((c) => (c.el.disabled = true));
+    resultEl2.textContent = won
+      ? "🎉 Geschafft! Du hast einen Zusatzstern verdient!"
+      : "⏰ Zeit abgelaufen – diesmal leider kein Zusatzstern.";
+    resultEl2.classList.remove("hidden");
+    onComplete(won);
+  }
+
+  function handleCardClick(index) {
+    if (finished || locked) return;
+    const card = cards[index];
+    if (card.matched || card.el.classList.contains("flipped")) return;
+
+    card.el.textContent = card.symbol;
+    card.el.classList.add("flipped");
+    flipped.push(index);
+
+    if (flipped.length === 2) {
+      locked = true;
+      const [a, b] = flipped;
+      if (cards[a].symbol === cards[b].symbol) {
+        cards[a].matched = true;
+        cards[b].matched = true;
+        cards[a].el.classList.add("matched");
+        cards[b].el.classList.add("matched");
+        flipped = [];
+        locked = false;
+        matchedCount += 1;
+        if (matchedCount === MINIGAME_SYMBOLS.length) {
+          finish(true);
+        }
+      } else {
+        setTimeout(() => {
+          cards[a].el.textContent = MINIGAME_CARD_BACK;
+          cards[b].el.textContent = MINIGAME_CARD_BACK;
+          cards[a].el.classList.remove("flipped");
+          cards[b].el.classList.remove("flipped");
+          flipped = [];
+          locked = false;
+        }, 600);
+      }
+    }
+  }
+
+  const timerHandle = setInterval(() => {
+    timeLeft -= 1;
+    timerEl.textContent = `⏱ ${timeLeft}s`;
+    if (timeLeft <= 3) timerEl.classList.add("low");
+    if (timeLeft <= 0) finish(false);
+  }, 1000);
+
+  closeBtn.onclick = () => {
+    if (!finished) finish(false);
+    overlay.classList.add("hidden");
+  };
+}
+
 let currentTotalStars = 0;
 
 async function refreshStarsTotal() {
@@ -405,6 +534,7 @@ function loadCurrentTask() {
   renderProblemStatement(document.getElementById("problem-text"), problem.latex, problem.text);
   renderProblemImages(problem.images);
   clearCanvas();
+  setTool("pen");
   resultEl.classList.add("hidden");
   statusEl.textContent = "";
   submitBtn.classList.remove("hidden");
@@ -418,6 +548,11 @@ function loadCurrentTask() {
   const hintBox = document.getElementById("hint-box");
   hintBox.textContent = "";
   hintBox.classList.add("hidden");
+
+  const bonusBtn = document.getElementById("btn-play-bonus-game");
+  bonusBtn.classList.add("hidden");
+  bonusBtn.disabled = false;
+  bonusBtn.onclick = null;
 }
 
 document.getElementById("hint-btn").addEventListener("click", async () => {
@@ -481,12 +616,30 @@ submitBtn.addEventListener("click", async () => {
     resultEl.classList.remove("hidden");
     statusEl.textContent = "";
 
-    state.results.push({
+    const resultEntry = {
       problemId: problem.id,
       points: data.points,
       awarded: data.awarded,
       fullyCorrect: Boolean(data.correct),
-    });
+      bonusStars: 0,
+    };
+    state.results.push(resultEntry);
+
+    // Bonus-Merkspiel: nur im Uebungsmodus und nur nach einer vollstaendig richtigen Loesung.
+    const bonusBtn = document.getElementById("btn-play-bonus-game");
+    if (state.mode === "uebung" && resultEntry.fullyCorrect) {
+      bonusBtn.classList.remove("hidden");
+      bonusBtn.disabled = false;
+      bonusBtn.textContent = "🎮 Bonus-Spiel spielen (+1 ⭐)";
+      bonusBtn.onclick = () => {
+        bonusBtn.disabled = true;
+        openMemoryGame((won) => {
+          resultEntry.bonusStars = won ? 1 : 0;
+          bonusBtn.textContent = won ? "🎉 Zusatzstern verdient!" : "😕 Kein Zusatzstern diesmal";
+        });
+      };
+    }
+
     submitBtn.classList.add("hidden");
     nextBtn.classList.remove("hidden");
   } catch (err) {
@@ -510,6 +663,8 @@ async function finishRun() {
   const awardedPoints = state.results.reduce((sum, r) => sum + r.awarded, 0);
   const fullyCorrectCount = state.results.filter((r) => r.fullyCorrect).length;
   const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
+  // 3 Sterne pro vollstaendig richtiger Aufgabe, plus 1 Bonus-Stern je gewonnenem Merkspiel.
+  const starsEarned = state.results.reduce((sum, r) => sum + (r.fullyCorrect ? 3 : 0) + (r.bonusStars || 0), 0);
 
   await api("/api/results", {
     method: "POST",
@@ -525,7 +680,7 @@ async function finishRun() {
   document.getElementById("summary-score").textContent =
     `${awardedPoints} von ${totalPoints} Punkten (${percent}%) – ` +
     `${fullyCorrectCount} von ${state.results.length} Aufgaben vollständig richtig`;
-  document.getElementById("summary-stars").textContent = "⭐".repeat(fullyCorrectCount) || "–";
+  document.getElementById("summary-stars").textContent = starsEarned > 0 ? "⭐".repeat(starsEarned) : "–";
   showScreen("screen-summary");
 
   const levelBefore = getLevelInfo(state.starsBeforeRun || 0);

@@ -212,6 +212,12 @@ button {
   border-color: var(--ink);
 }
 
+.tool-btn.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
 .btn-secondary {
   background: #eee;
 }
@@ -312,6 +318,50 @@ button {
     transform: translateY(110vh) rotate(360deg);
     opacity: 0.3;
   }
+}
+
+.minigame-timer {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.minigame-timer.low {
+  color: #d33;
+}
+
+.minigame-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.minigame-card {
+  aspect-ratio: 1;
+  font-size: 2rem;
+  border-radius: 6px;
+  border: 1px solid #999;
+  background: var(--ink);
+  color: transparent;
+  cursor: pointer;
+}
+
+.minigame-card.flipped,
+.minigame-card.matched {
+  background: #fff;
+  color: #222;
+}
+
+.minigame-card.matched {
+  background: #d7f5d7;
+  border-color: #4caf50;
+  cursor: default;
+}
+
+.minigame-result {
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .summary-score {

@@ -37,14 +37,16 @@ export async function initDb() {
 }
 
 // Speichert einen abgeschlossenen Lauf (ein Uebungs-Ergebnis oder eine ganze Pruefung).
-// details: [{ problemId, points, awarded, fullyCorrect }]
+// details: [{ problemId, points, awarded, fullyCorrect, bonusStars }]
 export async function saveResult({ playerName, mode, scope, details }) {
   const total = details.length;
   const correct = details.filter((d) => d.fullyCorrect).length;
   const totalPoints = details.reduce((sum, d) => sum + d.points, 0);
   const awardedPoints = details.reduce((sum, d) => sum + d.awarded, 0);
   const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
-  const stars = correct; // 1 Stern pro vollstaendig richtig geloester Aufgabe
+  // 3 Sterne pro vollstaendig richtig geloester Aufgabe, plus 1 Bonus-Stern je gewonnenem
+  // Merkspiel (nur im Uebungsmodus moeglich).
+  const stars = details.reduce((sum, d) => sum + (d.fullyCorrect ? 3 : 0) + (d.bonusStars || 0), 0);
 
   const { rows } = await pool.query(
     `INSERT INTO results (player_name, mode, scope, total, correct, percent, stars, details, total_points, awarded_points)

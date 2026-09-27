@@ -273,12 +273,13 @@ app.post("/api/results", async (req, res) => {
           typeof d.awarded === "number" &&
           d.awarded >= 0 &&
           d.awarded <= d.points + 1e-9 &&
-          typeof d.fullyCorrect === "boolean"
+          typeof d.fullyCorrect === "boolean" &&
+          (d.bonusStars === undefined || (typeof d.bonusStars === "number" && d.bonusStars >= 0))
       )
     ) {
-      return res
-        .status(400)
-        .json({ error: "details muss ein nicht-leeres Array aus {problemId, points, awarded, fullyCorrect} sein." });
+      return res.status(400).json({
+        error: "details muss ein nicht-leeres Array aus {problemId, points, awarded, fullyCorrect, bonusStars?} sein.",
+      });
     }
 
     const saved = await saveResult({ playerName: playerName.trim(), mode, scope, details });
