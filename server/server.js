@@ -174,27 +174,27 @@ app.post("/api/evaluate", async (req, res) => {
     // Modell im "pathCorrect"-Feld behauptet.
     const pathCorrect = hasPath && Boolean(result.pathCorrect) && !hasInvalidStep && deterministic.ok;
 
-    // Punktevergabe: voller Punkt nur bei korrektem Weg UND korrektem Ergebnis. Ein erkennbar
-    // FALSCHER Rechenweg gibt immer 0 Punkte, auch wenn zufaellig das richtige Endergebnis dasteht.
-    // Fehlt der Rechenweg komplett oder fehlt/ist das Endergebnis falsch, gibt es je einen halben Punkt
-    // fuer die jeweils andere korrekte Haelfte (nur Ergebnis bzw. nur Weg).
+    // Punktevergabe: volle Punktzahl, sobald das Endergebnis korrekt ist (unabhaengig davon, ob
+    // ueberhaupt ein Rechenweg gezeigt wurde) - AUSSER der gezeigte Rechenweg enthaelt nachweislich
+    // einen Fehler; dann gibt es 0 Punkte, auch wenn das Endergebnis zufaellig richtig dasteht.
+    // Ist das Endergebnis falsch/fehlt, aber der gezeigte Rechenweg ist fuer sich korrekt, gibt es
+    // einen halben Punkt fuer den richtigen Ansatz.
     const points = typeof problem.points === "number" ? problem.points : 1;
     const pathState = !hasPath ? "missing" : pathCorrect ? "correct" : "incorrect";
     let awarded;
     if (pathState === "incorrect") {
       awarded = 0;
+    } else if (resultCorrect) {
+      awarded = points;
     } else if (pathState === "correct") {
-      awarded = resultCorrect ? points : points / 2;
+      awarded = points / 2;
     } else {
-      // pathState === "missing"
-      awarded = resultCorrect ? points / 2 : 0;
+      awarded = 0;
     }
     const fullyCorrect = awarded === points;
 
     const notes = [...deterministic.problems];
-    if (pathState === "missing" && resultCorrect) {
-      notes.push("Kein Rechenweg erkennbar, nur das Endergebnis \u2013 daher gibt es einen halben Punkt.");
-    } else if (pathState === "correct" && !resultCorrect) {
+    if (pathState === "correct" && !resultCorrect) {
       notes.push("Der Rechenweg ist korrekt, aber das Endergebnis fehlt oder stimmt nicht \u2013 daher gibt es einen halben Punkt.");
     }
     const feedback = notes.length > 0 ? `${result.feedback ?? ""} (${notes.join(" ")})`.trim() : result.feedback ?? "";

@@ -73,6 +73,16 @@ h1 {
   border: 1px solid #ddd;
 }
 
+/* KaTeX's outer .katex box defaults to inline-block (shrink-to-fit width), so a long
+   \text{...} sentence renders as one unbreakable line. Force it back into normal text flow
+   so it wraps like any other paragraph. */
+.problem-text .katex,
+#result-latex-rendered .katex {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .problem-images {
   display: flex;
   gap: 0.5rem;

@@ -91,6 +91,34 @@ function renderMath(el, latex, fallbackText) {
   }
 }
 
+// Rendert eine Aufgabenstellung, die aus laengerem Beschreibungstext (in \text{...}) und
+// kurzen Mathe-Ausdruecken gemischt sein kann. KaTeX bietet innerhalb von \text{...} keine
+// Umbruchstellen fuer den Browser (Leerzeichen werden als feste Abstaende, nicht als
+// umbrechbare Zeichen gerendert) - lange Saetze wuerden sonst als eine einzige, nicht
+// umbrechende Zeile ueberlaufen. Deshalb wird \text{...} als normaler (umbrechbarer) Text
+// eingefuegt und nur die uebrigen, kurzen Mathe-Fragmente per KaTeX gerendert.
+function renderProblemStatement(el, latex, fallbackText) {
+  el.innerHTML = "";
+  if (!latex) {
+    el.textContent = fallbackText || "";
+    return;
+  }
+  try {
+    const parts = latex.split(/\\text\{([^{}]*)\}/g);
+    parts.forEach((part, i) => {
+      if (i % 2 === 1) {
+        el.appendChild(document.createTextNode(part));
+      } else if (part.trim()) {
+        const span = document.createElement("span");
+        window.katex.render(part, span, { throwOnError: false, displayMode: false });
+        el.appendChild(span);
+      }
+    });
+  } catch {
+    el.textContent = fallbackText || latex;
+  }
+}
+
 // ---------- App-Zustand ----------
 const state = {
   playerName: localStorage.getItem("matheapp_playerName") || "",
@@ -297,7 +325,7 @@ function loadCurrentTask() {
     progressEl.classList.add("hidden");
   }
   document.getElementById("problem-text").innerHTML = "";
-  renderMath(document.getElementById("problem-text"), problem.latex, problem.text);
+  renderProblemStatement(document.getElementById("problem-text"), problem.latex, problem.text);
   renderProblemImages(problem.images);
   clearCanvas();
   resultEl.classList.add("hidden");
