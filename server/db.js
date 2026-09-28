@@ -15,6 +15,15 @@ export const pool = new Pool({
   ssl: isLocal ? false : { rejectUnauthorized: false },
 });
 
+// OHNE diesen Handler wirft eine idle Pool-Verbindung, die vom Postgres-Server/Proxy getrennt
+// wird (z.B. Idle-Timeout bei gehosteten DBs wie Railway, kurzer Netzwerk-Haenger), ein
+// unbehandeltes 'error'-Event - das crasht den GESAMTEN Node-Prozess, nicht nur die eine Anfrage.
+// So einen Absturz mitten in einer Pruefungsmodus-Speicherung (POST /api/results) haette exakt
+// den Effekt "Ergebnis/Sterne verschwinden einfach", ohne dass irgendein Fehler sichtbar wird.
+pool.on("error", (err) => {
+  console.error("Unerwarteter Fehler bei einer Postgres-Idle-Verbindung (Pool bleibt aktiv):", err);
+});
+
 export async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS results (

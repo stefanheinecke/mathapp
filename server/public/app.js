@@ -467,7 +467,15 @@ async function runLivePreview() {
 const API_BASE_URL = window.MATHEAPP_API_BASE_URL || "";
 
 async function api(url, options) {
-  const res = await fetch(`${API_BASE_URL}${url}`, options);
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}${url}`, options);
+  } catch (err) {
+    // fetch() selbst schlaegt fehl bei Netzwerkabbruch/Server-Crash (nicht nur bei HTTP-
+    // Fehlerstatus) - ohne diesen catch wuerde das hier als unbehandelte Exception durchschlagen
+    // und z.B. finishRun() mittendrin abbrechen, ohne dass Sterne/Fehleranzeige je gesetzt werden.
+    return { ok: false, status: 0, data: { error: err?.message || "Netzwerkfehler" } };
+  }
   let data = {};
   try {
     data = await res.json();
