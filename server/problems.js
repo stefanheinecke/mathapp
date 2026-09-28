@@ -144,6 +144,26 @@ const RAW_PROBLEMS = [
     hints: [
     ],
     },
+    {
+    id: "2026-2a",
+    latex: "\\text{Löse die Gleichungen nach x auf: } 5−(5x−12) = 10−2(4x+1)",
+    answer: "𝑥=−3",
+    year: 2026,
+    category: "Gleichung",
+    points: 2,
+    hints: [
+    ],
+  },
+  {
+    id: "2026-2b",
+    latex: "\\text{Löse die Gleichungen nach x auf: }  \\dfrac{5x+3}{4}-\\dfrac{2−9x}{5} = 3x",
+    answer: "𝑥=−7",
+    year: 2026,
+    category: "Gleichung",
+    points: 2,
+    hints: [
+    ],
+  },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
