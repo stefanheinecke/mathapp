@@ -123,13 +123,27 @@ const RAW_PROBLEMS = [
     text: "Von einem Drachenviereck ABCD (siehe Skizze) ist unten die Diagonale BD bereits vorgegeben. Ausserdem kennt man AB = 4 cm sowie AC = 10 cm. Konstruiere das Drachenviereck ABCD.",
     latex: "\\text{Von einem Drachenviereck ABCD (siehe Skizze) ist unten die Diagonale BD bereits vorgegeben. Ausserdem kennt man AB = 4 cm sowie AC = 10 cm. Konstruiere das Drachenviereck ABCD.}",
     images: ["/images/problem-2026-1i1.png", "/images/problem-2026-1i2.png"],
-    answer: "6",
+    answer: "Drachenviereck ABCD, symmetrisch zur Diagonale AC (Mittelsenkrechte von BD), mit AB = 4 cm und AC = 10 cm.",
     year: 2026,
     category: "Geometrie",
     points: 1,
+    // Konstruktionsaufgabe statt Rechenaufgabe: kein OCR/Algebra-Check, sondern ein Vision-Modell
+    // beurteilt das gezeichnete Bild direkt anhand dieser Bewertungsanleitung (0 oder 1 Punkt).
+    gradingType: "construction",
+    gradingCriteria:
+      "Es wird entweder 0 oder 1 Punkt vergeben.\n" +
+      "Der Punkt wird NUR vergeben, wenn der fuer die Konstruktion der Strecke AB notwendige Kreisbogen " +
+      "(Radius 4 cm um B) ersichtlich ist.\n" +
+      "Der Punkt wird TROTZDEM vergeben,\n" +
+      "- falls die Konstruktion der Mittelsenkrechten/des Kreisbogens fuer die Symmetrieachse AC nicht " +
+      "erkennbar ist,\n" +
+      "- falls die Konstruktion ungenau ist,\n" +
+      "- falls die Ecken A und C nicht oder falsch beschriftet sind,\n" +
+      "- falls das Drachenviereck ABCD spiegelverkehrt konstruiert wurde (A und C vertauscht bzw. auf der " +
+      "anderen Seite von BD).",
     hints: [
     ],
-  },
+    },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.

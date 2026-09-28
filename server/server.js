@@ -49,6 +49,70 @@ async function recognizeHandwriting(imageDataUrl) {
   };
 }
 
+// Konstruktionsaufgaben (z.B. Drachenviereck) lassen sich nicht per OCR/Algebra pruefen - hier
+// beurteilt ein Vision-Modell das Bild direkt anhand der hinterlegten Bewertungsanleitung.
+// Es gibt keine Teilpunkte: entweder der volle Punkt oder keiner.
+async function gradeConstruction(problem, imageDataUrl, hintsUsed) {
+  const completion = await openai.chat.completions.create({
+    model: MODEL,
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Du bist ein Mathelehrer, der eine handschriftliche geometrische Konstruktion anhand eines " +
+          "Fotos/Scans beurteilt. Du bekommst die Aufgabenstellung und eine Bewertungsanleitung mit den " +
+          "genauen Kriterien fuer 0 oder 1 Punkt. Es gibt KEINE Teilpunkte - vergib ausschliesslich nach " +
+          "diesen Kriterien den vollen Punkt oder keinen.\n\n" +
+          "Antworte AUSSCHLIESSLICH mit kompaktem JSON in dieser Form: " +
+          '{"correct": boolean, "feedback": string}. ' +
+          "Das feedback ist kurz (1-2 Saetze), auf Deutsch, freundlich und konkret - bei einem Fehler " +
+          "nenne genau, welches Kriterium nicht erfuellt ist.",
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: `Aufgabe: ${problem.text}\n\nBewertungsanleitung:\n${problem.gradingCriteria}` },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  const raw = completion.choices[0]?.message?.content || "{}";
+  let result;
+  try {
+    result = JSON.parse(raw);
+  } catch {
+    throw new Error(`Konnte KI-Antwort nicht auswerten: ${raw}`);
+  }
+
+  const points = typeof problem.points === "number" ? problem.points : 1;
+  const resultCorrect = Boolean(result.correct);
+  let awarded = resultCorrect ? points : 0;
+  const notes = [];
+  if (hintsUsed) {
+    awarded = 0;
+    notes.push("Du hast Hinweise verwendet, deshalb gibt es fuer diese Aufgabe 0 Punkte.");
+  }
+  const feedback = notes.length > 0 ? `${result.feedback ?? ""} (${notes.join(" ")})`.trim() : result.feedback ?? "";
+
+  return {
+    transcription: "Handgezeichnete Konstruktion (siehe Bild)",
+    latex: null,
+    steps: [],
+    deterministicCheck: { ok: true, problems: [] },
+    pathState: resultCorrect ? "correct" : "incorrect",
+    resultCorrect,
+    points,
+    awarded,
+    hintsUsed: Boolean(hintsUsed),
+    correct: awarded === points,
+    feedback,
+  };
+}
+
 // Kleine, fest hinterlegte Beispielaufgaben fuer den Prototyp (siehe problems.js).
 // Die Loesung bleibt serverseitig, damit sie nicht im Client manipuliert werden kann.
 
@@ -124,6 +188,12 @@ app.post("/api/evaluate", async (req, res) => {
     const problem = PROBLEMS.find((p) => p.id === problemId);
     if (!problem) {
       return res.status(404).json({ error: "Unbekannte Aufgabe." });
+    }
+
+    // Konstruktionsaufgaben (siehe oben) werden komplett anders bewertet (Vision statt OCR/Algebra).
+    if (problem.gradingType === "construction") {
+      const graded = await gradeConstruction(problem, image, hintsUsed);
+      return res.json(graded);
     }
 
     let recognized;
