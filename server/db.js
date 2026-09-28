@@ -37,7 +37,9 @@ export async function initDb() {
 }
 
 // Speichert einen abgeschlossenen Lauf (ein Uebungs-Ergebnis oder eine ganze Pruefung).
-// details: [{ problemId, points, awarded, fullyCorrect, bonusStars }]
+// details: [{ problemId, points, awarded, fullyCorrect, bonusStars, problemText?, problemLatex?,
+//             transcription?, resultLatex?, feedback?, image? }] - die optionalen Felder speisen
+// spaeter die Detailansicht im Verlauf und werden unveraendert in der JSONB-Spalte abgelegt.
 export async function saveResult({ playerName, mode, scope, details }) {
   const total = details.length;
   const correct = details.filter((d) => d.fullyCorrect).length;

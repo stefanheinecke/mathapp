@@ -107,6 +107,29 @@ const RAW_PROBLEMS = [
       "Bestimme zuerst die Quadrate der gegebenen Seitenlängen.",
       "x ist die Wurzel aus der Summe bzw. Differenz der Quadrate – vereinfache die Wurzel so weit wie möglich.",
     ],  },
+    {
+    id: "2026-1h",
+    latex: "\\text{Das Volumen der Pyramide beträgt 7296 m^3. Berechne die Höhe h: ",
+    images: ["/images/problem-2026-1h.png"],
+    answer: "h = 38 = 38m",
+    year: 2026,
+    category: "Geometrie",
+    points: 1,
+    hints: [
+    ],  
+    },
+    {
+    id: "2026-1i",
+    text: "Von einem Drachenviereck ABCD (siehe Skizze) ist unten die Diagonale BD bereits vorgegeben. Ausserdem kennt man AB = 4 cm sowie AC = 10 cm. Konstruiere das Drachenviereck ABCD.",
+    latex: "\\text{Von einem Drachenviereck ABCD (siehe Skizze) ist unten die Diagonale BD bereits vorgegeben. Ausserdem kennt man AB = 4 cm sowie AC = 10 cm. Konstruiere das Drachenviereck ABCD.}",
+    images: ["/images/problem-2026-1i1.png", "/images/problem-2026-1i2.png"],
+    answer: "6",
+    year: 2026,
+    category: "Geometrie",
+    points: 1,
+    hints: [
+    ],
+  },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.

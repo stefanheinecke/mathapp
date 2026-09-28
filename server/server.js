@@ -290,7 +290,15 @@ app.post("/api/results", async (req, res) => {
           d.awarded >= 0 &&
           d.awarded <= d.points + 1e-9 &&
           typeof d.fullyCorrect === "boolean" &&
-          (d.bonusStars === undefined || (typeof d.bonusStars === "number" && d.bonusStars >= 0))
+          (d.bonusStars === undefined || (typeof d.bonusStars === "number" && d.bonusStars >= 0)) &&
+          // Optionale Felder fuer die spaetere Detailansicht ("was hat das Kind geschrieben?").
+          (d.problemText === undefined || (typeof d.problemText === "string" && d.problemText.length <= 2000)) &&
+          (d.problemLatex === undefined || (typeof d.problemLatex === "string" && d.problemLatex.length <= 2000)) &&
+          (d.transcription === undefined || (typeof d.transcription === "string" && d.transcription.length <= 2000)) &&
+          (d.resultLatex === undefined || (typeof d.resultLatex === "string" && d.resultLatex.length <= 2000)) &&
+          (d.feedback === undefined || (typeof d.feedback === "string" && d.feedback.length <= 2000)) &&
+          (d.image === undefined ||
+            (typeof d.image === "string" && d.image.startsWith("data:image/png;base64,") && d.image.length <= 3_000_000))
       )
     ) {
       return res.status(400).json({

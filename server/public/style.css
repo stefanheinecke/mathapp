@@ -272,6 +272,24 @@ button {
   color: #555;
 }
 
+.exam-timer {
+  display: inline-block;
+  background: #fff3cd;
+  border: 2px solid #e0a800;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #7a5400;
+  margin-bottom: 0.5rem;
+}
+
+.exam-timer.exam-timer-expired {
+  background: #f8d7da;
+  border-color: #d33;
+  color: #a30000;
+}
+
 .stars-total {
   font-size: 1.1rem;
   color: #b8860b;
@@ -454,6 +472,12 @@ button {
   font-weight: 700;
 }
 
+.summary-grade {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .summary-stars {
   font-size: 2rem;
   letter-spacing: 0.25rem;
@@ -461,6 +485,46 @@ button {
 
 #history-list {
   overflow-x: auto;
+}
+
+.history-details-row td {
+  padding: 0 0 0.75rem;
+  border-top: none;
+}
+
+.history-details summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 600;
+  padding: 0.3rem 0;
+}
+
+.history-problem-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.history-problem {
+  background: #f7f8fc;
+  border: 1px solid #dde1ee;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.history-problem-statement {
+  font-weight: 600;
+}
+
+.history-problem-image {
+  display: block;
+  max-width: 100%;
+  width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  background: #fff;
 }
 
 #history-list table {

@@ -81,6 +81,8 @@
 
     <!-- Gemeinsamer Aufgaben-Bildschirm (Uebung: 1 Aufgabe, Pruefung: mehrere nacheinander) -->
     <section id="screen-task" class="screen hidden">
+      <!-- Nur im Pruefungsmodus sichtbar: 90-Minuten-Gegenzeit -->
+      <p id="exam-timer" class="exam-timer hidden">⏱️ <span id="exam-timer-value">90:00</span></p>
       <p id="task-progress" class="task-progress hidden"></p>
       <p id="problem-text" class="problem-text"></p>
       <div id="problem-images" class="problem-images"></div>
@@ -126,6 +128,7 @@
     <section id="screen-summary" class="screen hidden">
       <h2>Ergebnis der Prüfung</h2>
       <p id="summary-score" class="summary-score"></p>
+      <p id="summary-grade" class="summary-grade hidden"></p>
       <p id="summary-stars" class="summary-stars"></p>
       <div class="toolbar">
         <button id="btn-summary-restart">Zurück zur Startseite</button>

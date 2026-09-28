@@ -274,6 +274,53 @@ document.getElementById("pencilkit-open-btn").addEventListener("click", async ()
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((el) => el.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
+  if (id !== "screen-task") {
+    stopExamTimer();
+  }
+}
+
+// Schweizer Notenformel: Note = erreichte Punkte * 5 / maximale Punkte + 1, auf 2 Stellen gerundet.
+function computeGrade(awardedPoints, totalPoints) {
+  if (!totalPoints) return null;
+  return Math.round(((awardedPoints * 5) / totalPoints + 1) * 100) / 100;
+}
+
+// ---------- Pruefungsmodus-Timer (90 Minuten Gegenzeit) ----------
+const EXAM_DURATION_SECONDS = 90 * 60;
+let examTimerInterval = null;
+let examSecondsLeft = EXAM_DURATION_SECONDS;
+
+function formatCountdown(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function stopExamTimer() {
+  clearInterval(examTimerInterval);
+  examTimerInterval = null;
+  document.getElementById("exam-timer").classList.add("hidden");
+}
+
+function startExamTimer() {
+  examSecondsLeft = EXAM_DURATION_SECONDS;
+  const timerEl = document.getElementById("exam-timer");
+  const valueEl = document.getElementById("exam-timer-value");
+  timerEl.classList.remove("hidden", "exam-timer-expired");
+  valueEl.textContent = formatCountdown(examSecondsLeft);
+  clearInterval(examTimerInterval);
+  examTimerInterval = setInterval(() => {
+    examSecondsLeft -= 1;
+    if (examSecondsLeft <= 0) {
+      examSecondsLeft = 0;
+      valueEl.textContent = "00:00";
+      timerEl.classList.add("exam-timer-expired");
+      clearInterval(examTimerInterval);
+      examTimerInterval = null;
+      return;
+    }
+    valueEl.textContent = formatCountdown(examSecondsLeft);
+  }, 1000);
 }
 
 function setActiveNav(navId) {
@@ -884,6 +931,11 @@ function startTaskFlow(queue) {
   state.results = [];
   state.starsBeforeRun = currentTotalStars;
   showScreen("screen-task");
+  if (state.mode === "pruefung_jahr" || state.mode === "pruefung_kategorie") {
+    startExamTimer();
+  } else {
+    stopExamTimer();
+  }
   loadCurrentTask();
 }
 
@@ -1007,6 +1059,13 @@ submitBtn.addEventListener("click", async () => {
       awarded: data.awarded,
       fullyCorrect: Boolean(data.correct),
       bonusStars: 0,
+      // Fuer die spaetere Detailansicht im Verlauf ("was hat das Kind geschrieben?").
+      problemText: problem.text || "",
+      problemLatex: problem.latex || "",
+      transcription: data.transcription || "",
+      resultLatex: data.latex || "",
+      feedback: data.feedback || "",
+      image,
     };
     state.results.push(resultEntry);
 
@@ -1048,6 +1107,7 @@ nextBtn.addEventListener("click", () => {
 });
 
 async function finishRun() {
+  stopExamTimer();
   const totalPoints = state.results.reduce((sum, r) => sum + r.points, 0);
   const awardedPoints = state.results.reduce((sum, r) => sum + r.awarded, 0);
   const fullyCorrectCount = state.results.filter((r) => r.fullyCorrect).length;
@@ -1069,6 +1129,17 @@ async function finishRun() {
   document.getElementById("summary-score").textContent =
     `${awardedPoints} von ${totalPoints} Punkten (${percent}%) – ` +
     `${fullyCorrectCount} von ${state.results.length} Aufgaben vollständig richtig`;
+
+  const gradeEl = document.getElementById("summary-grade");
+  const isExamMode = state.mode === "pruefung_jahr" || state.mode === "pruefung_kategorie";
+  const grade = computeGrade(awardedPoints, totalPoints);
+  if (isExamMode && grade !== null) {
+    gradeEl.textContent = `Note: ${grade.toFixed(2)}`;
+    gradeEl.classList.remove("hidden");
+  } else {
+    gradeEl.classList.add("hidden");
+  }
+
   document.getElementById("summary-stars").textContent = starsEarned > 0 ? "⭐".repeat(starsEarned) : "–";
   showScreen("screen-summary");
 
@@ -1097,21 +1168,96 @@ async function goToHistory() {
   }
   const modeLabels = { uebung: "Übung", pruefung_jahr: "Prüfung (Jahr)", pruefung_kategorie: "Prüfung (Kategorie)" };
   const rows = data
-    .map(
-      (r) => `<tr>
+    .map((r, i) => {
+      const grade = computeGrade(r.awarded_points, r.total_points);
+      return `<tr>
         <td>${new Date(r.created_at).toLocaleString("de-CH")}</td>
         <td>${modeLabels[r.mode] || r.mode}</td>
         <td>${r.scope}</td>
         <td>${r.awarded_points} / ${r.total_points} Punkte</td>
         <td>${r.percent}%</td>
+        <td>${grade !== null ? grade.toFixed(2) : "–"}</td>
         <td>${"⭐".repeat(r.stars)}</td>
-      </tr>`
-    )
+      </tr>
+      <tr class="history-details-row">
+        <td colspan="7">
+          <details class="history-details">
+            <summary>🔍 Aufgaben im Detail ansehen</summary>
+            <div id="history-detail-${i}" class="history-problem-list"></div>
+          </details>
+        </td>
+      </tr>`;
+    })
     .join("");
   listEl.innerHTML = `<table>
-    <thead><tr><th>Datum</th><th>Modus</th><th>Bereich</th><th>Punkte</th><th>Prozent</th><th>Sterne</th></tr></thead>
+    <thead><tr><th>Datum</th><th>Modus</th><th>Bereich</th><th>Punkte</th><th>Prozent</th><th>Note</th><th>Sterne</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+
+  // Detailkarten erst nach dem Einfuegen ins DOM befuellen, da renderMath/renderProblemStatement
+  // pro Element aufgerufen werden (nicht ueber einen HTML-String moeglich).
+  data.forEach((r, i) => {
+    const container = document.getElementById(`history-detail-${i}`);
+    if (!Array.isArray(r.details) || r.details.length === 0) {
+      container.textContent = "Fuer dieses Ergebnis sind keine Aufgaben-Details gespeichert.";
+      return;
+    }
+    r.details.forEach((d) => container.appendChild(renderHistoryProblemCard(d)));
+  });
+}
+
+// Baut die Detailkarte einer einzelnen Aufgabe: Aufgabentext, handschriftliche Loesung (Bild),
+// erkannte Antwort und Feedback - damit man spaeter nachvollziehen kann, was das Kind
+// geschrieben hat und wo es haperte. Aeltere, vor dieser Funktion gespeicherte Ergebnisse haben
+// diese Felder nicht - die jeweiligen Abschnitte werden dann einfach ausgelassen.
+function renderHistoryProblemCard(d) {
+  const card = document.createElement("div");
+  card.className = "history-problem";
+
+  if (d.problemText || d.problemLatex) {
+    const statement = document.createElement("p");
+    statement.className = "history-problem-statement";
+    renderProblemStatement(statement, d.problemLatex, d.problemText);
+    card.appendChild(statement);
+  }
+
+  if (d.image) {
+    const img = document.createElement("img");
+    img.src = d.image;
+    img.alt = "Handschriftliche Lösung";
+    img.className = "history-problem-image";
+    card.appendChild(img);
+  }
+
+  if (d.transcription || d.resultLatex) {
+    const answer = document.createElement("p");
+    const label = document.createElement("strong");
+    label.textContent = "Erkannte Antwort: ";
+    answer.appendChild(label);
+    const answerSpan = document.createElement("span");
+    renderMath(answerSpan, d.resultLatex, d.transcription);
+    answer.appendChild(answerSpan);
+    card.appendChild(answer);
+  }
+
+  const pointsLine = document.createElement("p");
+  const pointsLabel = document.createElement("strong");
+  pointsLabel.textContent = "Punkte: ";
+  const icon = d.fullyCorrect ? "✅" : d.awarded > 0 ? "🌗" : "❌";
+  pointsLine.appendChild(pointsLabel);
+  pointsLine.appendChild(document.createTextNode(`${d.awarded} / ${d.points} ${icon}`));
+  card.appendChild(pointsLine);
+
+  if (d.feedback) {
+    const feedback = document.createElement("p");
+    const feedbackLabel = document.createElement("strong");
+    feedbackLabel.textContent = "Feedback: ";
+    feedback.appendChild(feedbackLabel);
+    feedback.appendChild(document.createTextNode(d.feedback));
+    card.appendChild(feedback);
+  }
+
+  return card;
 }
 
 document.getElementById("nav-history").addEventListener("click", goToHistory);
