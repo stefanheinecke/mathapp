@@ -101,6 +101,22 @@ h1 {
   margin-top: 1rem;
 }
 
+/* Zwei uebereinanderliegende Canvas-Ebenen: #notebook speichert die fertige Tinte (Radierer,
+   PNG-Export), #notebook-live zeichnet nur den gerade aktiven perfect-freehand-Strich, damit er
+   bei jedem pointermove flimmerfrei neu berechnet werden kann, ohne die gesamte Zeichnung
+   neu zu rendern. Beide behalten das 800x500-Seitenverhaeltnis bei, schrumpfen aber auf
+   schmalen Bildschirmen proportional mit. */
+.notebook-stack {
+  position: relative;
+  max-width: 800px;
+}
+
+.notebook-stack canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 #notebook {
   background-color: #fff;
   background-image:
@@ -109,10 +125,23 @@ h1 {
   background-size: var(--grid-size) var(--grid-size);
   border: 1px solid #999;
   border-radius: 4px;
+}
+
+#notebook-live {
+  position: absolute;
+  top: 0;
+  left: 0;
   touch-action: none;
   cursor: crosshair;
-  display: block;
-  max-width: 100%;
+}
+
+.live-preview {
+  margin-top: 0.5rem;
+  background: #eef3ff;
+  border: 1px solid #c7d6f5;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
 }
 
 .pencilkit-wrap {

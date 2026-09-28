@@ -86,7 +86,10 @@
       <div id="problem-images" class="problem-images"></div>
 
       <section class="canvas-wrap">
-        <canvas id="notebook" width="800" height="500"></canvas>
+        <div id="notebook-stack" class="notebook-stack">
+          <canvas id="notebook" width="800" height="500"></canvas>
+          <canvas id="notebook-live" width="800" height="500"></canvas>
+        </div>
         <!-- Nur auf iOS (Capacitor) sichtbar: PencilKit ersetzt hier den HTML-Canvas -->
         <div id="pencilkit-wrap" class="pencilkit-wrap hidden">
           <button id="pencilkit-open-btn" class="hint-btn">✍️ Lösung mit Stift schreiben</button>
@@ -99,6 +102,9 @@
           <button id="submit-btn">Abgeben</button>
           <button id="hint-btn" class="hint-btn" title="Hinweis anzeigen (kostet die Punkte dieser Aufgabe)">💡 Hinweis</button>
         </div>
+        <p id="live-preview" class="live-preview hidden">
+          <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
+        </p>
         <p id="hint-box" class="hint-box hidden"></p>
       </section>
 
@@ -174,6 +180,20 @@
     integrity="sha384-19KE2cFb3U+RUWmyhBz7aLOGDG8WrRC6hE3oY/HTZZlAAVWYTdmvLC//+TIV3zUx"
     crossorigin="anonymous"
   ></script>
-  <script src="app.js"></script>
+  <!-- perfect-freehand hat keinen klassischen UMD-Browser-Build (nur ESM/CJS), daher per ESM-
+       CDN-Modus importieren und app.js erst danach nachladen, damit window.getStroke feststeht,
+       bevor app.js (klassisches Skript) laeuft. Schlaegt der CDN-Import fehl, laedt app.js
+       trotzdem (und faellt dort automatisch auf einfache Linien statt perfect-freehand zurueck). -->
+  <script type="module">
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/perfect-freehand@1.2.3/+esm");
+      window.getStroke = mod.getStroke;
+    } catch (err) {
+      console.error("perfect-freehand konnte nicht geladen werden, falle auf einfache Linien zurueck.", err);
+    }
+    const appScript = document.createElement("script");
+    appScript.src = "app.js";
+    document.body.appendChild(appScript);
+  </script>
 </body>
 </html>

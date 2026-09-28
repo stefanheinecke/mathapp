@@ -95,6 +95,22 @@ app.get("/api/hint", (req, res) => {
   res.json({ hint: hints[index], hintIndex: index, totalHints: hints.length, hasMore: index < hints.length - 1 });
 });
 
+// Reine Live-Vorschau waehrend des Schreibens: nur MathPix-OCR, keine Bewertung (kein OpenAI-
+// Aufruf), damit haeufige Aufrufe waehrend des Schreibens moeglichst billig bleiben.
+app.post("/api/ocr-preview", async (req, res) => {
+  try {
+    const { image } = req.body || {};
+    if (typeof image !== "string" || !image.startsWith("data:image/png;base64,")) {
+      return res.status(400).json({ error: "image muss eine PNG Data-URL sein." });
+    }
+    const recognized = await recognizeHandwriting(image);
+    res.json(recognized);
+  } catch (err) {
+    console.error("MathPix Live-Vorschau Fehler:", err);
+    res.status(502).json({ error: "Live-Vorschau fehlgeschlagen.", details: err?.message });
+  }
+});
+
 app.post("/api/evaluate", async (req, res) => {
   try {
     const { problemId, image, hintsUsed } = req.body || {};

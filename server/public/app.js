@@ -1,21 +1,28 @@
 // ---------- Canvas (kariertes Notizfeld) ----------
+// Zwei Ebenen: #notebook speichert die fertige Zeichnung (Radierer + PNG-Export nutzen sie).
+// #notebook-live zeigt waehrend eines Stifts-Strichs nur den aktuell aktiven, per
+// perfect-freehand geglaetteten Strich, damit bei jedem pointermove nicht die gesamte
+// Zeichnung neu gerendert werden muss.
 const canvas = document.getElementById("notebook");
 const ctx = canvas.getContext("2d");
-ctx.lineCap = "round";
-ctx.strokeStyle = "#1a3a8f";
+const liveCanvas = document.getElementById("notebook-live");
+const liveCtx = liveCanvas.getContext("2d");
 
-const PEN_WIDTH = 2.5;
+const PEN_STROKE_OPTIONS = { size: 6, thinning: 0.6, smoothing: 0.5, streamline: 0.5 };
 const ERASER_WIDTH = 24;
+const INK_COLOR = "#1a3a8f";
 let currentTool = "pen"; // 'pen' | 'eraser'
 
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
+let currentStrokePoints = [];
+let hasInk = false;
 
 function getPos(evt) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  const rect = liveCanvas.getBoundingClientRect();
+  const scaleX = liveCanvas.width / rect.width;
+  const scaleY = liveCanvas.height / rect.height;
   return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY };
 }
 
@@ -28,46 +35,169 @@ function setTool(tool) {
 document.getElementById("tool-pen").addEventListener("click", () => setTool("pen"));
 document.getElementById("tool-eraser").addEventListener("click", () => setTool("eraser"));
 
+// Wandelt die von perfect-freehand berechneten Umriss-Punkte in einen SVG-Pfad um (die von der
+// perfect-freehand-Doku empfohlene Rendering-Methode), der dann per Path2D gefuellt wird.
+function getSvgPathFromStroke(points) {
+  const len = points.length;
+  if (len < 4) return "";
+  const average = (a, b) => (a + b) / 2;
+  let a = points[0];
+  let b = points[1];
+  const c = points[2];
+  let result = `M${a[0].toFixed(2)},${a[1].toFixed(2)} Q${b[0].toFixed(2)},${b[1].toFixed(2)} ${average(
+    b[0],
+    c[0]
+  ).toFixed(2)},${average(b[1], c[1]).toFixed(2)} T`;
+  for (let i = 2, max = len - 1; i < max; i++) {
+    a = points[i];
+    b = points[i + 1];
+    result += `${average(a[0], b[0]).toFixed(2)},${average(a[1], b[1]).toFixed(2)} `;
+  }
+  return `${result}Z`;
+}
+
+// Rendert einen Stift-Strich in einen beliebigen Canvas-Context. Nutzt perfect-freehand fuer
+// eine natuerliche, druckempfindliche Linienfuehrung; faellt auf eine einfache Polylinie
+// zurueck, falls die perfect-freehand-Bibliothek (CDN) nicht geladen werden konnte.
+function renderStrokeToContext(targetCtx, points) {
+  if (points.length < 2) return;
+  if (window.getStroke) {
+    const outline = window.getStroke(points, PEN_STROKE_OPTIONS);
+    const pathData = getSvgPathFromStroke(outline);
+    if (pathData) {
+      targetCtx.fillStyle = INK_COLOR;
+      targetCtx.fill(new Path2D(pathData));
+    }
+  } else {
+    targetCtx.strokeStyle = INK_COLOR;
+    targetCtx.lineWidth = 2.5;
+    targetCtx.lineCap = "round";
+    targetCtx.beginPath();
+    targetCtx.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) {
+      targetCtx.lineTo(points[i][0], points[i][1]);
+    }
+    targetCtx.stroke();
+  }
+}
+
+function renderLiveStroke() {
+  liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+  renderStrokeToContext(liveCtx, currentStrokePoints);
+}
+
+function commitLiveStroke() {
+  if (currentStrokePoints.length >= 2) {
+    ctx.globalCompositeOperation = "source-over";
+    renderStrokeToContext(ctx, currentStrokePoints);
+    hasInk = true;
+    scheduleLivePreview();
+  }
+  liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+  currentStrokePoints = [];
+}
+
 function startDraw(evt) {
   drawing = true;
+  const pos = getPos(evt);
   // "destination-out" macht die uebermalten Pixel transparent statt sie einzufaerben - so
   // radiert der Radierer nur das Geschriebene weg, das karierte CSS-Hintergrundmuster bleibt sichtbar.
   if (currentTool === "eraser") {
     ctx.globalCompositeOperation = "destination-out";
     ctx.lineWidth = ERASER_WIDTH;
+    ctx.lineCap = "round";
+    lastX = pos.x;
+    lastY = pos.y;
   } else {
-    ctx.globalCompositeOperation = "source-over";
-    ctx.lineWidth = PEN_WIDTH;
+    currentStrokePoints = [[pos.x, pos.y]];
   }
-  const pos = getPos(evt);
-  lastX = pos.x;
-  lastY = pos.y;
 }
 
 function draw(evt) {
   if (!drawing) return;
   const pos = getPos(evt);
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
-  lastX = pos.x;
-  lastY = pos.y;
+  if (currentTool === "eraser") {
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    lastX = pos.x;
+    lastY = pos.y;
+    hasInk = true; // Radieren veraendert die Zeichnung ebenfalls - zaehlt fuer die Live-Vorschau.
+  } else {
+    currentStrokePoints.push([pos.x, pos.y]);
+    renderLiveStroke();
+  }
 }
 
 function stopDraw() {
+  if (!drawing) return;
   drawing = false;
+  if (currentTool === "pen") {
+    commitLiveStroke();
+  } else {
+    scheduleLivePreview();
+  }
 }
 
-canvas.addEventListener("pointerdown", startDraw);
-canvas.addEventListener("pointermove", draw);
+liveCanvas.addEventListener("pointerdown", startDraw);
+liveCanvas.addEventListener("pointermove", draw);
 window.addEventListener("pointerup", stopDraw);
 
 function clearCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+  currentStrokePoints = [];
+  hasInk = false;
+  hideLivePreview();
 }
 
 document.getElementById("clear-btn").addEventListener("click", clearCanvas);
+
+// ---------- Live-Vorschau (MathPix OCR waehrend des Schreibens) ----------
+// Ruft MathPix NICHT bei jedem Strich auf, sondern erst nach einer kurzen Schreibpause
+// (Debounce), um die MathPix-Kosten im Rahmen zu halten. Rein informativ - Fehler hier duerfen
+// die eigentliche Aufgabe nicht stoeren.
+const LIVE_PREVIEW_DEBOUNCE_MS = 1200;
+let livePreviewTimer = null;
+let livePreviewInFlight = false;
+
+function hideLivePreview() {
+  clearTimeout(livePreviewTimer);
+  livePreviewTimer = null;
+  document.getElementById("live-preview").classList.add("hidden");
+  document.getElementById("live-preview-content").textContent = "";
+}
+
+function scheduleLivePreview() {
+  if (!hasInk) return;
+  clearTimeout(livePreviewTimer);
+  livePreviewTimer = setTimeout(runLivePreview, LIVE_PREVIEW_DEBOUNCE_MS);
+}
+
+async function runLivePreview() {
+  if (livePreviewInFlight || !hasInk) return;
+  livePreviewInFlight = true;
+  try {
+    const image = canvas.toDataURL("image/png");
+    const { ok, data } = await api("/api/ocr-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image }),
+    });
+    const box = document.getElementById("live-preview");
+    if (!ok || (!data.text && !data.latex)) {
+      box.classList.add("hidden");
+      return;
+    }
+    renderMath(document.getElementById("live-preview-content"), data.latex, data.text);
+    box.classList.remove("hidden");
+  } catch {
+    // Live-Vorschau ist ein Komfortfeature - Netzwerkfehler hier werden bewusst ignoriert.
+  } finally {
+    livePreviewInFlight = false;
+  }
+}
 
 // ---------- Kleine API-Hilfsfunktion ----------
 // Auf dem Web laeuft der Server unter derselben Origin (relative Pfade reichen). In der iOS-App
