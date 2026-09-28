@@ -237,7 +237,7 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-6",
-    text: "Unten sind Längsschnitte von vier prismenförmigen Gefässen abgebildet. Alle Gefässe sind am Anfang leer. Dann werden sie mit konstantem Zufluss gefüllt. Ein Füllgraph gibt die Füllhöhe im Gefäss in Abhängigkeit der Zeit an. Ordne jedem Gefäss den passenden Füllgraphen zu.",
+    text: "",
     answer: "1-F, 2-D, 3-A, 4-B",
     year: 2026,
     images: ["/images/problem-2026-6.png"],
@@ -248,7 +248,7 @@ const RAW_PROBLEMS = [
     },
     {
     id: "2026-7a",
-    text: "Samira und Nora spielen Basketball.\n\nSamira trifft den Korb erfahrungsgemäss in zwei von drei Würfen.\n\nNora trifft den Korb erfahrungsgemäss in drei von fünf Würfen.\n\nBeide dürfen je einen Freiwurf werfen. Berechne die Wahrscheinlichkeit, dass mindestens jemand von den beiden den Korb trifft.",
+    latext: "\\text{Samira und Nora spielen Basketball.\n\nSamira trifft den Korb erfahrungsgemäss in zwei von drei Würfen.\n\nNora trifft den Korb erfahrungsgemäss in drei von fünf Würfen.\n\nBeide dürfen je einen Freiwurf werfen. Berechne die Wahrscheinlichkeit, dass mindestens jemand von den beiden den Korb trifft.}",
     answer: "13/15 = 0.86 ≈ 86.7%",
     year: 2026,
     category: "Textaufgabe",
@@ -258,7 +258,7 @@ const RAW_PROBLEMS = [
     },
     {
     id: "2026-7b",
-    text: "Fabian und Lenny dürfen für ihr Basketballteam je einen Freiwurf werfen.\n\nFabian trifft den Korb erfahrungsgemäss in drei von vier Würfen.\n\nDie Wahrscheinlichkeit, dass beide den Korb treffen, beträgt 30%.\n\nBerechne Lennys Trefferwahrscheinlichkeit.",
+    latext: "\\text{Fabian und Lenny dürfen für ihr Basketballteam je einen Freiwurf werfen.\n\nFabian trifft den Korb erfahrungsgemäss in drei von vier Würfen.\n\nDie Wahrscheinlichkeit, dass beide den Korb treffen, beträgt 30%.\n\nBerechne Lennys Trefferwahrscheinlichkeit.}",
     answer: "2/5 = 0.4 ≈ 40%",
     year: 2026,
     category: "Textaufgabe",
