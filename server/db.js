@@ -55,9 +55,11 @@ export async function saveResult({ playerName, mode, scope, details }) {
   const totalPoints = details.reduce((sum, d) => sum + d.points, 0);
   const awardedPoints = details.reduce((sum, d) => sum + d.awarded, 0);
   const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
-  // 3 Sterne pro vollstaendig richtig geloester Aufgabe, plus 1 Bonus-Stern je gewonnenem
-  // Merkspiel (nur im Uebungsmodus moeglich).
-  const stars = details.reduce((sum, d) => sum + (d.fullyCorrect ? 3 : 0) + (d.bonusStars || 0), 0);
+  // Sterne gibt es nur im Uebungsmodus (3 pro vollstaendig richtig geloester Aufgabe, plus 1
+  // Bonus-Stern je gewonnenem Minispiel) - im Pruefungsmodus zaehlt stattdessen Prozent/Note,
+  // daher werden dort bewusst keine Sterne vergeben.
+  const stars =
+    mode === "uebung" ? details.reduce((sum, d) => sum + (d.fullyCorrect ? 3 : 0) + (d.bonusStars || 0), 0) : 0;
 
   const { rows } = await pool.query(
     `INSERT INTO results (player_name, mode, scope, total, correct, percent, stars, details, total_points, awarded_points)

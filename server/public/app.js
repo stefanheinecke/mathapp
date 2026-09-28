@@ -1328,7 +1328,9 @@ submitBtn.addEventListener("click", async () => {
     if (data.hintsUsed) {
       badgeEl.textContent = `💡 Hinweise verwendet (0 / ${data.points} Punkte)`;
     } else if (data.correct) {
-      badgeEl.innerHTML = `Richtig ✅ (${data.awarded} / ${data.points} Punkte) <span class="star-earned">⭐</span>`;
+      // Sterne gibt es nur im Uebungsmodus - im Pruefungsmodus zaehlen stattdessen Prozent/Note.
+      const starSuffix = state.mode === "uebung" ? " ⭐" : "";
+      badgeEl.textContent = `Richtig ✅ (${data.awarded} / ${data.points} Punkte)${starSuffix}`;
     } else if (data.awarded > 0) {
       badgeEl.textContent = `Teilweise richtig 🌗 (${data.awarded} / ${data.points} Punkte)`;
     } else {
@@ -1393,12 +1395,16 @@ nextBtn.addEventListener("click", () => {
 
 async function finishRun() {
   stopExamTimer();
+  const isExamMode = state.mode === "pruefung_jahr" || state.mode === "pruefung_kategorie";
   const totalPoints = state.results.reduce((sum, r) => sum + r.points, 0);
   const awardedPoints = state.results.reduce((sum, r) => sum + r.awarded, 0);
   const fullyCorrectCount = state.results.filter((r) => r.fullyCorrect).length;
   const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
-  // 3 Sterne pro vollstaendig richtiger Aufgabe, plus 1 Bonus-Stern je gewonnenem Merkspiel.
-  const starsEarned = state.results.reduce((sum, r) => sum + (r.fullyCorrect ? 3 : 0) + (r.bonusStars || 0), 0);
+  // Sterne gibt es nur im Uebungsmodus (3 pro vollstaendig richtiger Aufgabe, plus 1 Bonus-Stern
+  // je gewonnenem Merkspiel) - im Pruefungsmodus zaehlen stattdessen Prozent/Note, keine Sterne.
+  const starsEarned = isExamMode
+    ? 0
+    : state.results.reduce((sum, r) => sum + (r.fullyCorrect ? 3 : 0) + (r.bonusStars || 0), 0);
 
   const { ok: saved } = await api("/api/results", {
     method: "POST",
@@ -1412,19 +1418,25 @@ async function finishRun() {
   });
 
   document.getElementById("summary-score").textContent =
-    `${awardedPoints} von ${totalPoints} Punkten (${percent}%) – ` +
+    `${awardedPoints} von ${totalPoints} Punkten – ` +
     `${fullyCorrectCount} von ${state.results.length} Aufgaben vollständig richtig`;
 
   const gradeEl = document.getElementById("summary-grade");
   const grade = computeGrade(awardedPoints, totalPoints);
-  if (grade !== null) {
-    gradeEl.textContent = `Note: ${grade.toFixed(2)}`;
+  if (isExamMode && grade !== null) {
+    gradeEl.textContent = `${percent}% – Note: ${grade.toFixed(2)}`;
     gradeEl.classList.remove("hidden");
   } else {
     gradeEl.classList.add("hidden");
   }
 
-  document.getElementById("summary-stars").textContent = starsEarned > 0 ? "⭐".repeat(starsEarned) : "–";
+  const starsEl = document.getElementById("summary-stars");
+  if (isExamMode) {
+    starsEl.classList.add("hidden");
+  } else {
+    starsEl.textContent = starsEarned > 0 ? "⭐".repeat(starsEarned) : "–";
+    starsEl.classList.remove("hidden");
+  }
   // Ohne diesen Hinweis wuerde ein fehlgeschlagenes Speichern (z.B. Netzwerkfehler, zu grosses
   // Bild-Payload) unbemerkt bleiben: die Zusammenfassung saehe trotzdem "erfolgreich" aus, obwohl
   // weder Punkte noch Sterne dauerhaft gespeichert wurden.
@@ -1457,15 +1469,16 @@ async function goToHistory() {
   const modeLabels = { uebung: "Übung", pruefung_jahr: "Prüfung (Jahr)", pruefung_kategorie: "Prüfung (Kategorie)" };
   const rows = data
     .map((r, i) => {
+      const isExamRow = r.mode === "pruefung_jahr" || r.mode === "pruefung_kategorie";
       const grade = computeGrade(r.awarded_points, r.total_points);
       return `<tr>
         <td>${new Date(r.created_at).toLocaleString("de-CH")}</td>
         <td>${modeLabels[r.mode] || r.mode}</td>
         <td>${r.scope}</td>
         <td>${r.awarded_points} / ${r.total_points} Punkte</td>
-        <td>${r.percent}%</td>
-        <td>${grade !== null ? grade.toFixed(2) : "–"}</td>
-        <td>${"⭐".repeat(r.stars)}</td>
+        <td>${isExamRow ? `${r.percent}%` : "–"}</td>
+        <td>${isExamRow && grade !== null ? grade.toFixed(2) : "–"}</td>
+        <td>${isExamRow ? "–" : r.stars > 0 ? "⭐".repeat(r.stars) : "–"}</td>
       </tr>
       <tr class="history-details-row">
         <td colspan="7">
