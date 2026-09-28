@@ -164,6 +164,26 @@ const RAW_PROBLEMS = [
     hints: [
     ],
   },
+  {
+    id: "2026-3a",
+    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  \\dfrac{xy}{4}+\\dfrac{3x^2}{4}:\\dfrac{9xy}{16y^2}",
+    answer: "19xy/12",
+    year: 2026,
+    category: "Gleichung",
+    points: 2,
+    hints: [
+    ],
+  },
+  {
+    id: "2026-3b",
+    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √64a2+(−6a)2−√3a\\cdot√27a",
+    answer: "a",
+    year: 2026,
+    category: "Gleichung",
+    points: 2,
+    hints: [
+    ],
+  },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
