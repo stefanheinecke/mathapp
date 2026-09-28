@@ -270,6 +270,7 @@ const RAW_PROBLEMS = [
     id: "2026-8",
     latext: "\\text{Der grau eingefärbte Teil des Rechtecks ABCD hat einen Flächeninhalt von 154 cm^2. Berechne x.\n\n(Die Abbildung ist nicht massstabsgetreu.)}",
     answer: "x=3.5cm",
+    images: ["/images/problem-2026-8.png"],
     year: 2026,
     category: "Geometrie",
     points: 3,
