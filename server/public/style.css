@@ -91,8 +91,11 @@ h1 {
 }
 
 .problem-images img {
-  max-width: 280px;
-  max-height: 280px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 70vh;
+  height: auto;
+  object-fit: contain;
   border: 1px solid #ddd;
   border-radius: 6px;
 }

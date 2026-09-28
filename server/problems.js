@@ -245,7 +245,37 @@ const RAW_PROBLEMS = [
     points: 2,
     hints: [
     ],
-  },
+    },
+    {
+    id: "2026-7a",
+    text: "Samira und Nora spielen Basketball.\n\nSamira trifft den Korb erfahrungsgemäss in zwei von drei Würfen.\n\nNora trifft den Korb erfahrungsgemäss in drei von fünf Würfen.\n\nBeide dürfen je einen Freiwurf werfen. Berechne die Wahrscheinlichkeit, dass mindestens jemand von den beiden den Korb trifft.",
+    answer: "13/15 = 0.86 ≈ 86.7%",
+    year: 2026,
+    category: "Textaufgabe",
+    points: 2,
+    hints: [
+    ],
+    },
+    {
+    id: "2026-7b",
+    text: "Fabian und Lenny dürfen für ihr Basketballteam je einen Freiwurf werfen.\n\nFabian trifft den Korb erfahrungsgemäss in drei von vier Würfen.\n\nDie Wahrscheinlichkeit, dass beide den Korb treffen, beträgt 30%.\n\nBerechne Lennys Trefferwahrscheinlichkeit.",
+    answer: "2/5 = 0.4 ≈ 40%",
+    year: 2026,
+    category: "Textaufgabe",
+    points: 1,
+    hints: [
+    ],
+    },
+    {
+    id: "2026-8",
+    latext: "\\text{Der grau eingefärbte Teil des Rechtecks ABCD hat einen Flächeninhalt von 154 cm^2. Berechne x.\n\n(Die Abbildung ist nicht massstabsgetreu.)}",
+    answer: "x=3.5cm",
+    year: 2026,
+    category: "Geometrie",
+    points: 3,
+    hints: [
+    ],
+    },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
