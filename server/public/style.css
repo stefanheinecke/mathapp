@@ -115,9 +115,25 @@ h1 {
   max-width: 100%;
 }
 
+.pencilkit-wrap {
+  border: 1px dashed #999;
+  border-radius: 4px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.pencilkit-preview {
+  display: block;
+  max-width: 100%;
+  margin: 0.75rem auto 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
 .toolbar {
   margin-top: 0.5rem;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -276,6 +292,8 @@ button {
   justify-content: center;
   z-index: 1000;
   overflow: hidden;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .level-up-card {
@@ -283,9 +301,12 @@ button {
   border-radius: 12px;
   padding: 2rem 2.5rem;
   text-align: center;
-  max-width: 420px;
+  width: min(420px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   z-index: 1;
+  box-sizing: border-box;
 }
 
 .level-up-card h2 {
@@ -409,8 +430,13 @@ button {
   letter-spacing: 0.25rem;
 }
 
+#history-list {
+  overflow-x: auto;
+}
+
 #history-list table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   margin-top: 1rem;
   background: #fff;
@@ -441,5 +467,59 @@ button {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+/* Mobile (iPhone Safari etc.): Sidebar wird zur horizontalen Leiste oben statt fixer Spalte
+   links, damit auf schmalen Bildschirmen nichts ueberlappt oder abgeschnitten wird. */
+@media (max-width: 700px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    width: auto;
+    flex: 0 0 auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+    padding: 0.75rem 1rem;
+  }
+
+  .sidebar h1 {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  .nav-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .stars-total,
+  .level-info {
+    width: 100%;
+    order: 10;
+  }
+
+  main {
+    padding: 1rem;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .mode-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .screen select,
+  .screen input[type="text"] {
+    max-width: 100%;
   }
 }

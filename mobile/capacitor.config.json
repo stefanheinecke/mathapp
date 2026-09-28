@@ -1,0 +1,8 @@
+{
+  "appId": "com.matheapp.ios",
+  "appName": "Mathe-Übung",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always"
+  }
+}

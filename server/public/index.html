@@ -87,6 +87,11 @@
 
       <section class="canvas-wrap">
         <canvas id="notebook" width="800" height="500"></canvas>
+        <!-- Nur auf iOS (Capacitor) sichtbar: PencilKit ersetzt hier den HTML-Canvas -->
+        <div id="pencilkit-wrap" class="pencilkit-wrap hidden">
+          <button id="pencilkit-open-btn" class="hint-btn">✍️ Lösung mit Stift schreiben</button>
+          <img id="pencilkit-preview" class="pencilkit-preview hidden" alt="Vorschau der Handschrift" />
+        </div>
         <div class="toolbar">
           <button id="tool-pen" class="tool-btn active">✏️ Stift</button>
           <button id="tool-eraser" class="tool-btn">🧽 Radierer</button>

@@ -1,0 +1,9 @@
+node_modules/
+www/
+
+# Xcode (once `npx cap add ios` has generated ios/)
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+ios/App/*.xcuserdatad/
+ios/App/App.xcworkspace/xcuserdata/

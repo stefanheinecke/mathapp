@@ -1,0 +1,17 @@
+{
+  "name": "matheapp-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capacitor-Wrapper der Matheapp-Weboberflaeche fuer die iOS-App (PencilKit statt HTML-Canvas).",
+  "scripts": {
+    "sync-www": "node sync-www.js",
+    "sync": "npm run sync-www && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/ios": "^6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.0"
+  }
+}

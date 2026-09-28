@@ -70,8 +70,13 @@ function clearCanvas() {
 document.getElementById("clear-btn").addEventListener("click", clearCanvas);
 
 // ---------- Kleine API-Hilfsfunktion ----------
+// Auf dem Web laeuft der Server unter derselben Origin (relative Pfade reichen). In der iOS-App
+// (Capacitor) laedt die WebView die Seite aber lokal, daher muss dort eine volle Backend-URL
+// gesetzt werden - siehe mobile/www/index.html (window.MATHEAPP_API_BASE_URL).
+const API_BASE_URL = window.MATHEAPP_API_BASE_URL || "";
+
 async function api(url, options) {
-  const res = await fetch(url, options);
+  const res = await fetch(`${API_BASE_URL}${url}`, options);
   let data = {};
   try {
     data = await res.json();
@@ -80,6 +85,60 @@ async function api(url, options) {
   }
   return { ok: res.ok, status: res.status, data };
 }
+
+// ---------- PencilKit (iOS/Capacitor) ----------
+// Auf iOS wird statt des HTML-Canvas ein natives PencilKit-Fenster geoeffnet (Custom Capacitor
+// Plugin "PencilKit", siehe mobile/ios-plugin-source/). Ueberall sonst bleibt der HTML-Canvas aktiv.
+function isNativeIOS() {
+  const cap = window.Capacitor;
+  return Boolean(cap && cap.isNativePlatform && cap.isNativePlatform() && cap.getPlatform && cap.getPlatform() === "ios");
+}
+
+let iosDrawingDataUrl = null;
+
+function resetIosDrawing() {
+  iosDrawingDataUrl = null;
+  const preview = document.getElementById("pencilkit-preview");
+  preview.classList.add("hidden");
+  preview.src = "";
+  document.getElementById("pencilkit-open-btn").textContent = "✍️ Lösung mit Stift schreiben";
+}
+
+// Liefert das PNG (Data-URL) der aktuellen Loesung - je nach Plattform aus PencilKit oder Canvas.
+async function captureDrawing() {
+  if (isNativeIOS()) {
+    return iosDrawingDataUrl;
+  }
+  return canvas.toDataURL("image/png");
+}
+
+if (isNativeIOS()) {
+  document.getElementById("notebook").classList.add("hidden");
+  document.getElementById("tool-pen").classList.add("hidden");
+  document.getElementById("tool-eraser").classList.add("hidden");
+  document.getElementById("clear-btn").classList.add("hidden");
+  document.getElementById("pencilkit-wrap").classList.remove("hidden");
+}
+
+document.getElementById("pencilkit-open-btn").addEventListener("click", async () => {
+  const plugin = window.Capacitor?.Plugins?.PencilKit;
+  if (!plugin) {
+    alert("PencilKit-Plugin nicht verfuegbar. Bitte die App neu starten.");
+    return;
+  }
+  try {
+    const result = await plugin.openCanvas();
+    iosDrawingDataUrl = result.image;
+    const preview = document.getElementById("pencilkit-preview");
+    preview.src = iosDrawingDataUrl;
+    preview.classList.remove("hidden");
+    document.getElementById("pencilkit-open-btn").textContent = "✍️ Lösung erneut schreiben";
+  } catch (err) {
+    if (err.message !== "Abgebrochen.") {
+      alert(`PencilKit-Fehler: ${err.message}`);
+    }
+  }
+});
 
 // ---------- Screens ----------
 function showScreen(id) {
@@ -625,6 +684,7 @@ function loadCurrentTask() {
   renderProblemImages(problem.images);
   clearCanvas();
   setTool("pen");
+  resetIosDrawing();
   resultEl.classList.add("hidden");
   statusEl.textContent = "";
   submitBtn.classList.remove("hidden");
@@ -673,11 +733,17 @@ document.getElementById("hint-btn").addEventListener("click", async () => {
 
 submitBtn.addEventListener("click", async () => {
   const problem = state.queue[state.currentIndex];
+
+  if (isNativeIOS() && !iosDrawingDataUrl) {
+    alert("Bitte zuerst deine Lösung mit dem Stift schreiben.");
+    return;
+  }
+
   resultEl.classList.add("hidden");
   statusEl.textContent = "Werte Lösung aus ...";
   submitBtn.disabled = true;
 
-  const image = canvas.toDataURL("image/png");
+  const image = await captureDrawing();
 
   try {
     const { ok, data } = await api("/api/evaluate", {
