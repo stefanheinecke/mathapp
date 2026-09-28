@@ -30,10 +30,233 @@ function setTool(tool) {
   currentTool = tool;
   document.getElementById("tool-pen").classList.toggle("active", tool === "pen");
   document.getElementById("tool-eraser").classList.toggle("active", tool === "eraser");
+  document.getElementById("tool-line").classList.toggle("active", tool === "line");
+  document.getElementById("tool-rectangle").classList.toggle("active", tool === "rectangle");
+  document.getElementById("tool-triangle").classList.toggle("active", tool === "triangle");
 }
 
 document.getElementById("tool-pen").addEventListener("click", () => setTool("pen"));
 document.getElementById("tool-eraser").addEventListener("click", () => setTool("eraser"));
+
+// ---------- Geometrie-Werkzeuge (Linie/Rechteck/Dreieck mit fest definierten Massen) ----------
+// 1 cm entspricht einem Gitterkaestchen (siehe --grid-size: 25px in style.css). Nach Eingabe der
+// Masse ueber den Dialog bestimmt der erste Klick den Ankerpunkt, die Mausbewegung nur noch die
+// Ausrichtung/Richtung - Laenge bzw. Seitenlaengen bleiben dabei exakt wie eingegeben.
+const PX_PER_CM = 25;
+let pendingShape = null; // { type: "line", lengthCm } | { type: "rectangle", widthCm, heightCm } | { type: "triangle", a, b, c }
+let shapeAnchor = null;
+
+function cmToCanvasPx(cm) {
+  const rect = liveCanvas.getBoundingClientRect();
+  const scaleX = liveCanvas.width / rect.width;
+  return cm * PX_PER_CM * scaleX;
+}
+
+// Eigener Dialog statt window.prompt(): prompt() wird in manchen WebViews (u.a. in
+// Automatisierungs-/Test-Umgebungen sowie teils in mobilen App-Wrappern) nicht unterstuetzt.
+function openShapeDialog(type) {
+  const title = document.getElementById("shape-dialog-title");
+  const labelA = document.getElementById("shape-input-a-label");
+  const labelB = document.getElementById("shape-input-b-label");
+  const rowB = document.getElementById("shape-input-b-row");
+  const rowC = document.getElementById("shape-input-c-row");
+  const inputA = document.getElementById("shape-input-a");
+  const inputB = document.getElementById("shape-input-b");
+  const inputC = document.getElementById("shape-input-c");
+  document.getElementById("shape-dialog-error").classList.add("hidden");
+
+  if (type === "line") {
+    title.textContent = "📏 Linie einfügen";
+    labelA.textContent = "Länge (cm):";
+    rowB.classList.add("hidden");
+    rowC.classList.add("hidden");
+    inputA.value = "5";
+  } else if (type === "rectangle") {
+    title.textContent = "▭ Rechteck einfügen";
+    labelA.textContent = "Breite (cm):";
+    labelB.textContent = "Höhe (cm):";
+    rowB.classList.remove("hidden");
+    rowC.classList.add("hidden");
+    inputA.value = "6";
+    inputB.value = "4";
+  } else if (type === "triangle") {
+    title.textContent = "△ Dreieck einfügen";
+    labelA.textContent = "Seite a (cm):";
+    labelB.textContent = "Seite b (cm):";
+    rowB.classList.remove("hidden");
+    rowC.classList.remove("hidden");
+    inputA.value = "5";
+    inputB.value = "4";
+    inputC.value = "3";
+  }
+  document.getElementById("shape-dialog-overlay").dataset.shapeType = type;
+  document.getElementById("shape-dialog-overlay").classList.remove("hidden");
+  inputA.focus();
+}
+
+document.getElementById("tool-line").addEventListener("click", () => openShapeDialog("line"));
+document.getElementById("tool-rectangle").addEventListener("click", () => openShapeDialog("rectangle"));
+document.getElementById("tool-triangle").addEventListener("click", () => openShapeDialog("triangle"));
+
+document.getElementById("shape-dialog-cancel").addEventListener("click", () => {
+  document.getElementById("shape-dialog-overlay").classList.add("hidden");
+});
+
+document.getElementById("shape-dialog-confirm").addEventListener("click", () => {
+  const overlay = document.getElementById("shape-dialog-overlay");
+  const type = overlay.dataset.shapeType;
+  const errorEl = document.getElementById("shape-dialog-error");
+  const showError = (msg) => {
+    errorEl.textContent = msg;
+    errorEl.classList.remove("hidden");
+  };
+  const parse = (id) => parseFloat(document.getElementById(id).value.replace(",", "."));
+  const a = parse("shape-input-a");
+  if (Number.isNaN(a) || a <= 0) return showError("Bitte eine Zahl grösser als 0 eingeben.");
+
+  if (type === "line") {
+    pendingShape = { type: "line", lengthCm: a };
+  } else if (type === "rectangle") {
+    const b = parse("shape-input-b");
+    if (Number.isNaN(b) || b <= 0) return showError("Bitte eine Zahl grösser als 0 eingeben.");
+    pendingShape = { type: "rectangle", widthCm: a, heightCm: b };
+  } else if (type === "triangle") {
+    const b = parse("shape-input-b");
+    const c = parse("shape-input-c");
+    if (Number.isNaN(b) || b <= 0 || Number.isNaN(c) || c <= 0) {
+      return showError("Bitte gültige Zahlen grösser als 0 eingeben.");
+    }
+    if (a + b <= c || a + c <= b || b + c <= a) {
+      return showError("Diese drei Seitenlängen ergeben kein gültiges Dreieck.");
+    }
+    pendingShape = { type: "triangle", a, b, c };
+  }
+  overlay.classList.add("hidden");
+  setTool(type);
+});
+
+function computeLinePoints(anchor, pos, lengthPx) {
+  const dx = pos.x - anchor.x;
+  const dy = pos.y - anchor.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const ux = dx / dist;
+  const uy = dy / dist;
+  return [
+    [anchor.x, anchor.y],
+    [anchor.x + ux * lengthPx, anchor.y + uy * lengthPx],
+  ];
+}
+
+function computeRectanglePoints(anchor, pos, widthPx, heightPx) {
+  const signX = pos.x >= anchor.x ? 1 : -1;
+  const signY = pos.y >= anchor.y ? 1 : -1;
+  const x2 = anchor.x + signX * widthPx;
+  const y2 = anchor.y + signY * heightPx;
+  return [
+    [anchor.x, anchor.y],
+    [x2, anchor.y],
+    [x2, y2],
+    [anchor.x, y2],
+    [anchor.x, anchor.y],
+  ];
+}
+
+// Platziert ein Dreieck mit den drei gegebenen Seitenlaengen (a = Ankerpunkt->Basispunkt) per
+// Kosinussatz: v1=Anker, v2 liegt in Mausrichtung im Abstand a, v3 wird daraus konstruiert.
+function computeTrianglePoints(anchor, pos, aCm, bCm, cCm) {
+  const dx = pos.x - anchor.x;
+  const dy = pos.y - anchor.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const aPx = cmToCanvasPx(aCm);
+  const bPx = cmToCanvasPx(bCm);
+  const cPx = cmToCanvasPx(cCm);
+  const v1 = anchor;
+  const v2 = { x: anchor.x + ux * aPx, y: anchor.y + uy * aPx };
+  const xLocal = (aPx * aPx + cPx * cPx - bPx * bPx) / (2 * aPx);
+  const yLocal = Math.sqrt(Math.max(0, cPx * cPx - xLocal * xLocal));
+  // Senkrechte zur Basisrichtung (ux, uy) ist (-uy, ux).
+  const v3 = {
+    x: v1.x + ux * xLocal + -uy * yLocal,
+    y: v1.y + uy * xLocal + ux * yLocal,
+  };
+  return [
+    [v1.x, v1.y],
+    [v2.x, v2.y],
+    [v3.x, v3.y],
+    [v1.x, v1.y],
+  ];
+}
+
+function renderShapeToContext(targetCtx, points) {
+  if (points.length < 2) return;
+  targetCtx.strokeStyle = INK_COLOR;
+  targetCtx.lineWidth = 2;
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.beginPath();
+  targetCtx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) {
+    targetCtx.lineTo(points[i][0], points[i][1]);
+  }
+  targetCtx.stroke();
+}
+
+// Beschriftet die Seiten mit den eingegebenen Massen, aehnlich wie in gedruckten Geometrieaufgaben.
+function drawShapeLabels(targetCtx, points, shape) {
+  targetCtx.fillStyle = INK_COLOR;
+  targetCtx.font = "16px sans-serif";
+  targetCtx.textAlign = "center";
+  targetCtx.textBaseline = "middle";
+  const fmt = (n) => `${n} cm`;
+  if (shape.type === "line") {
+    const [p1, p2] = points;
+    targetCtx.fillText(fmt(shape.lengthCm), (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2 - 12);
+  } else if (shape.type === "rectangle") {
+    const [p1, p2, , p4] = points;
+    targetCtx.fillText(fmt(shape.widthCm), (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2 - 10);
+    targetCtx.fillText(fmt(shape.heightCm), (p1[0] + p4[0]) / 2 - 18, (p1[1] + p4[1]) / 2);
+  } else if (shape.type === "triangle") {
+    const [v1, v2, v3] = points;
+    targetCtx.fillText(fmt(shape.a), (v1[0] + v2[0]) / 2, (v1[1] + v2[1]) / 2 + 14);
+    targetCtx.fillText(fmt(shape.b), (v2[0] + v3[0]) / 2 + 16, (v2[1] + v3[1]) / 2);
+    targetCtx.fillText(fmt(shape.c), (v3[0] + v1[0]) / 2 - 16, (v3[1] + v1[1]) / 2);
+  }
+}
+
+function getShapePreviewPoints(pos) {
+  if (!pendingShape || !shapeAnchor) return null;
+  if (pendingShape.type === "line") {
+    return computeLinePoints(shapeAnchor, pos, cmToCanvasPx(pendingShape.lengthCm));
+  }
+  if (pendingShape.type === "rectangle") {
+    return computeRectanglePoints(shapeAnchor, pos, cmToCanvasPx(pendingShape.widthCm), cmToCanvasPx(pendingShape.heightCm));
+  }
+  if (pendingShape.type === "triangle") {
+    return computeTrianglePoints(shapeAnchor, pos, pendingShape.a, pendingShape.b, pendingShape.c);
+  }
+  return null;
+}
+
+function renderShapePreview(pos) {
+  liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+  const points = getShapePreviewPoints(pos);
+  if (!points) return;
+  renderShapeToContext(liveCtx, points);
+  drawShapeLabels(liveCtx, points, pendingShape);
+}
+
+function commitShape(pos) {
+  const points = getShapePreviewPoints(pos);
+  liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+  if (!points) return;
+  ctx.globalCompositeOperation = "source-over";
+  renderShapeToContext(ctx, points);
+  drawShapeLabels(ctx, points, pendingShape);
+  hasInk = true;
+  scheduleLivePreview();
+}
 
 // Wandelt die von perfect-freehand berechneten Umriss-Punkte in einen SVG-Pfad um (die von der
 // perfect-freehand-Doku empfohlene Rendering-Methode), der dann per Path2D gefuellt wird.
@@ -108,8 +331,10 @@ function startDraw(evt) {
     ctx.lineCap = "round";
     lastX = pos.x;
     lastY = pos.y;
-  } else {
+  } else if (currentTool === "pen") {
     currentStrokePoints = [[pos.x, pos.y]];
+  } else if (pendingShape) {
+    shapeAnchor = pos;
   }
 }
 
@@ -124,17 +349,24 @@ function draw(evt) {
     lastX = pos.x;
     lastY = pos.y;
     hasInk = true; // Radieren veraendert die Zeichnung ebenfalls - zaehlt fuer die Live-Vorschau.
-  } else {
+  } else if (currentTool === "pen") {
     currentStrokePoints.push([pos.x, pos.y]);
     renderLiveStroke();
+  } else if (pendingShape && shapeAnchor) {
+    renderShapePreview(pos);
   }
 }
 
-function stopDraw() {
+function stopDraw(evt) {
   if (!drawing) return;
   drawing = false;
   if (currentTool === "pen") {
     commitLiveStroke();
+  } else if (pendingShape && shapeAnchor) {
+    commitShape(getPos(evt));
+    pendingShape = null;
+    shapeAnchor = null;
+    setTool("pen");
   } else {
     scheduleLivePreview();
   }
@@ -145,6 +377,7 @@ liveCanvas.addEventListener("pointermove", draw);
 window.addEventListener("pointerup", stopDraw);
 
 function clearCanvas() {
+  resetCanvasSize();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
   currentStrokePoints = [];
@@ -153,6 +386,34 @@ function clearCanvas() {
 }
 
 document.getElementById("clear-btn").addEventListener("click", clearCanvas);
+
+// ---------- Erweiterbare Zeichenflaeche ----------
+// Reicht der Standardplatz nicht, kann die Canvas per Knopf schrittweise verlaengert werden;
+// ein umgebender scrollbarer Rahmen (#notebook-scroll) verhindert, dass Werkzeugleiste und
+// Abgeben-Knopf dabei aus dem sichtbaren Bereich rutschen.
+const CANVAS_DEFAULT_HEIGHT = 500;
+const CANVAS_GROW_STEP = 300;
+const CANVAS_MAX_HEIGHT = 2600;
+
+function resetCanvasSize() {
+  canvas.height = CANVAS_DEFAULT_HEIGHT;
+  liveCanvas.height = CANVAS_DEFAULT_HEIGHT;
+}
+
+function growCanvas() {
+  if (canvas.height >= CANVAS_MAX_HEIGHT) return;
+  const newHeight = Math.min(CANVAS_MAX_HEIGHT, canvas.height + CANVAS_GROW_STEP);
+  // canvas.height zu setzen loescht den Inhalt - deshalb die bestehende Tinte vorher sichern
+  // und danach wiederherstellen.
+  const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  canvas.height = newHeight;
+  liveCanvas.height = newHeight;
+  ctx.putImageData(snapshot, 0, 0);
+  const scrollEl = document.getElementById("notebook-scroll");
+  scrollEl.scrollTop = scrollEl.scrollHeight;
+}
+
+document.getElementById("more-space-btn").addEventListener("click", growCanvas);
 
 // ---------- Live-Vorschau (MathPix OCR waehrend des Schreibens) ----------
 // Ruft MathPix NICHT bei jedem Strich auf, sondern erst nach einer kurzen Schreibpause
@@ -978,6 +1239,9 @@ function loadCurrentTask() {
   renderProblemImages(problem.images);
   clearCanvas();
   setTool("pen");
+  pendingShape = null;
+  shapeAnchor = null;
+  document.getElementById("shape-tools").classList.toggle("hidden", problem.category !== "Geometrie");
   resetIosDrawing();
   resultEl.classList.add("hidden");
   statusEl.textContent = "";
@@ -1128,7 +1392,7 @@ async function finishRun() {
   // 3 Sterne pro vollstaendig richtiger Aufgabe, plus 1 Bonus-Stern je gewonnenem Merkspiel.
   const starsEarned = state.results.reduce((sum, r) => sum + (r.fullyCorrect ? 3 : 0) + (r.bonusStars || 0), 0);
 
-  await api("/api/results", {
+  const { ok: saved } = await api("/api/results", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -1144,9 +1408,8 @@ async function finishRun() {
     `${fullyCorrectCount} von ${state.results.length} Aufgaben vollständig richtig`;
 
   const gradeEl = document.getElementById("summary-grade");
-  const isExamMode = state.mode === "pruefung_jahr" || state.mode === "pruefung_kategorie";
   const grade = computeGrade(awardedPoints, totalPoints);
-  if (isExamMode && grade !== null) {
+  if (grade !== null) {
     gradeEl.textContent = `Note: ${grade.toFixed(2)}`;
     gradeEl.classList.remove("hidden");
   } else {
@@ -1154,6 +1417,10 @@ async function finishRun() {
   }
 
   document.getElementById("summary-stars").textContent = starsEarned > 0 ? "⭐".repeat(starsEarned) : "–";
+  // Ohne diesen Hinweis wuerde ein fehlgeschlagenes Speichern (z.B. Netzwerkfehler, zu grosses
+  // Bild-Payload) unbemerkt bleiben: die Zusammenfassung saehe trotzdem "erfolgreich" aus, obwohl
+  // weder Punkte noch Sterne dauerhaft gespeichert wurden.
+  document.getElementById("summary-save-error").classList.toggle("hidden", saved);
   showScreen("screen-summary");
 
   const levelBefore = getLevelInfo(state.starsBeforeRun || 0);

@@ -104,6 +104,15 @@ h1 {
   margin-top: 1rem;
 }
 
+/* Scrollbarer Rahmen um die Canvas-Ebenen: die Zeichenflaeche kann per "Mehr Platz"-Knopf
+   ueber die Standardhoehe hinaus wachsen (fuer laengere Loesungswege), ohne dass Werkzeugleiste
+   und Abgeben-Knopf aus dem sichtbaren Bereich rutschen - stattdessen scrollt nur dieser Rahmen. */
+.notebook-scroll {
+  max-height: 65vh;
+  overflow-y: auto;
+  border-radius: 4px;
+}
+
 /* Zwei uebereinanderliegende Canvas-Ebenen: #notebook speichert die fertige Tinte (Radierer,
    PNG-Export), #notebook-live zeichnet nur den gerade aktiven perfect-freehand-Strich, damit er
    bei jedem pointermove flimmerfrei neu berechnet werden kann, ohne die gesamte Zeichnung
@@ -435,6 +444,20 @@ button {
   font-weight: 600;
 }
 
+#shape-dialog-overlay .level-up-card p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+#shape-dialog-overlay input[type="number"] {
+  width: 6rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 1rem;
+}
+
 .bubblepop-score {
   font-weight: 600;
   color: var(--ink);
@@ -484,6 +507,16 @@ button {
 .summary-stars {
   font-size: 2rem;
   letter-spacing: 0.25rem;
+}
+
+.summary-save-error {
+  margin-top: 0.75rem;
+  background: #fdecea;
+  border: 1px solid #f3b3ab;
+  color: #8a1f11;
+  border-radius: 6px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
 }
 
 #history-list {

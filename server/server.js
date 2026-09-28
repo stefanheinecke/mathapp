@@ -118,7 +118,7 @@ async function gradeConstruction(problem, imageDataUrl, hintsUsed) {
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "8mb" })); // handschriftliches Bild als Base64-PNG
+app.use(express.json({ limit: "20mb" })); // Pruefungsmodus speichert pro Aufgabe ein Bild mit - bei vielen Aufgaben summiert sich das.
 app.use(express.static(path.join(__dirname, "public")));
 
 // Liefert die verfuegbaren Jahre/Kategorien fuer die Auswahl-Dropdowns im Frontend.

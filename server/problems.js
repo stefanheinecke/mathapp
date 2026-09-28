@@ -116,7 +116,10 @@ const RAW_PROBLEMS = [
     category: "Geometrie",
     points: 1,
     hints: [
-    ],  
+      "Die Grundfläche der Pyramide ist ein Rechteck mit den Seiten 48 m und 12 m – berechne zuerst diese Fläche.",
+      "Für das Volumen einer Pyramide gilt: V = (1/3) · Grundfläche · Höhe.",
+      "Setze das gegebene Volumen (7296 m³) und die berechnete Grundfläche ein und löse nach h auf.",
+    ],
     },
     {
     id: "2026-1i",
@@ -142,6 +145,9 @@ const RAW_PROBLEMS = [
       "- falls das Drachenviereck ABCD spiegelverkehrt konstruiert wurde (A und C vertauscht bzw. auf der " +
       "anderen Seite von BD).",
     hints: [
+      "Trage zuerst mit dem Zirkel die Strecke AB (4 cm) ab: Schlage dazu einen Kreisbogen mit Radius 4 cm um B.",
+      "Der Punkt A liegt zugleich auf der Mittelsenkrechten von BD (da ABCD ein Drachenviereck mit AC als Symmetrieachse ist) – schneide diese mit dem Kreisbogen.",
+      "Trage anschliessend ab A die Strecke AC (10 cm) auf derselben Mittelsenkrechten ab, um den Punkt C auf der anderen Seite von BD zu finden.",
     ],
     },
     {
@@ -152,6 +158,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 2,
     hints: [
+      "Löse zuerst die Klammern auf beiden Seiten auf (Vorzeichen beachten!).",
+      "Fasse auf jeder Seite die Zahlen und die x-Terme zusammen.",
+      "Bringe alle x-Terme auf eine Seite und die Zahlen auf die andere, dann löse nach x auf.",
     ],
   },
   {
@@ -162,6 +171,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 2,
     hints: [
+      "Multipliziere beide Seiten mit dem Hauptnenner (hier 20), um die Brüche zu beseitigen.",
+      "Achte beim Auflösen der Klammern auf die Vorzeichen, besonders beim zweiten Bruch.",
+      "Fasse die x-Terme zusammen und löse die entstehende lineare Gleichung nach x auf.",
     ],
   },
   {
@@ -172,6 +184,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 2,
     hints: [
+      "Die Division bindet stärker als die Addition – rechne zuerst (3x²/4) : (9xy/16y²).",
+      "Ersetze die Division durch eine Multiplikation mit dem Kehrwert des zweiten Bruchs.",
+      "Kürze wo möglich und bringe danach beide Summanden auf den gleichen Nenner.",
     ],
   },
   {
@@ -182,6 +197,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 2,
     hints: [
+      "Vereinfache zuerst jede Wurzel bzw. jede Potenz einzeln, bevor du addierst oder subtrahierst.",
+      "Beachte: √(a²) = |a|, und für die Multiplikation von Wurzeln gilt √a · √b = √(a·b).",
+      "Fasse am Schluss alle gleichartigen Terme zusammen.",
     ],
   },
   {
@@ -192,6 +210,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 1,
     hints: [
+      "Wenn x die Anzahl Erwachsener ist, wie viele Kinder sind es dann (insgesamt 45 Personen)?",
+      "Multipliziere die Anzahl Erwachsener mit CHF 32 und die Anzahl Kinder mit CHF 18.",
+      "Die Summe dieser beiden Beträge muss CHF 1034 ergeben – das ist deine Gleichung.",
     ],
   },
   {
@@ -202,6 +223,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 1,
     hints: [
+      "Wenn x Mias Geld zu Beginn ist, wie viel hatte Alina zu Beginn (5-mal so viel)?",
+      "Ziehe von jedem der beiden Beträge das jeweils Ausgegebene ab, um ihr aktuelles Geld zu erhalten.",
+      "Die Summe des aktuellen Geldes beider zusammen muss 3x ergeben – das ist deine Gleichung.",
     ],
   },
   {
@@ -212,6 +236,9 @@ const RAW_PROBLEMS = [
     category: "Gleichung",
     points: 1,
     hints: [
+      "'Die um 8 verkleinerte Zahl' bedeutet (x − 8).",
+      "'Das Dreifache davon' ist 3·(x − 8), und 'die Hälfte davon' ist 3(x−8)/2.",
+      "'Um 2 grösser als das Fünffache der Zahl' bedeutet, dass der linke Ausdruck gleich 5x + 2 sein muss.",
     ],
   },
   {
@@ -223,6 +250,9 @@ const RAW_PROBLEMS = [
     category: "Textaufgabe",
     points: 2,
     hints: [
+      "Nutze zuerst das Verhältnis bei Oberrist (3/4 Ja), um aus den 54 Ja-Stimmen die Gesamtzahl der Anwesenden aus Oberrist zu berechnen.",
+      "Die Anzahl Anwesender aus Oberrist entspricht 60% aller Anwesenden – berechne daraus die Gesamtzahl aller Anwesenden und davon die Anzahl aus Unterrist (40%).",
+      "Wende auf die Anwesenden aus Unterrist den Nein-Anteil (43.75%) an, um die gesuchte Anzahl zu erhalten.",
     ],
   },
   {
@@ -233,17 +263,23 @@ const RAW_PROBLEMS = [
     category: "Textaufgabe",
     points: 1,
     hints: [
+      "Berechne zuerst 7.5% von CHF 84 – das entspricht Valerias 9%.",
+      "Du weisst nun: 9% von Valerias Taschengeld entsprechen diesem berechneten Betrag.",
+      "Teile diesen Betrag durch 0.09, um Valerias volles Taschengeld zu erhalten.",
     ],
   },
   {
     id: "2026-6",
-    text: "",
+    text: "Unten sind Längsschnitte von vier prismenförmigen Gefässen abgebildet. Alle Gefässe sind am Anfang leer. Dann werden sie mit konstantem Zufluss gefüllt. Ein Füllgraph gibt die Füllhöhe im Gefäss in Abhängigkeit der Zeit an. Ordne jedem Gefäss den passenden Füllgraphen zu.",
     answer: "1-F, 2-D, 3-A, 4-B",
     year: 2026,
     images: ["/images/problem-2026-6.png"],
     category: "Textaufgabe",
     points: 2,
     hints: [
+      "Ein Gefäss mit gleichbleibendem Querschnitt (z.B. ein Zylinder) füllt sich mit konstanter Geschwindigkeit – das ergibt eine Gerade im Füllgraphen.",
+      "Wird das Gefäss nach oben schmaler, steigt die Füllhöhe pro Zeiteinheit immer schneller (die Kurve wird steiler); wird es nach oben breiter, steigt sie immer langsamer.",
+      "Achte auf Gefässe mit mehreren Abschnitten (z.B. erst schmal, dann breit, dann wieder schmal) – solche Gefässe erzeugen Füllgraphen mit mehreren Knicken bzw. Wendepunkten.",
     ],
     },
     {
@@ -254,6 +290,9 @@ const RAW_PROBLEMS = [
     category: "Textaufgabe",
     points: 2,
     hints: [
+      "'Mindestens einer trifft' lässt sich einfacher über das Gegenereignis berechnen: 'Beide verfehlen'.",
+      "Berechne zuerst die Wahrscheinlichkeit, dass Samira verfehlt (1 − 2/3) und dass Nora verfehlt (1 − 3/5).",
+      "Multipliziere diese beiden Wahrscheinlichkeiten und ziehe das Ergebnis von 1 ab.",
     ],
     },
     {
@@ -264,6 +303,9 @@ const RAW_PROBLEMS = [
     category: "Textaufgabe",
     points: 1,
     hints: [
+      "Wenn zwei unabhängige Ereignisse beide eintreten sollen, multipliziert man ihre Wahrscheinlichkeiten.",
+      "Du kennst P(Fabian trifft) = 3/4 und P(beide treffen) = 30% = 0.3.",
+      "Teile die Wahrscheinlichkeit 'beide treffen' durch Fabians Trefferwahrscheinlichkeit, um Lennys Wahrscheinlichkeit zu erhalten.",
     ],
     },
     {
@@ -275,6 +317,9 @@ const RAW_PROBLEMS = [
     category: "Geometrie",
     points: 3,
     hints: [
+      "Berechne zuerst den Gesamtflächeninhalt des Rechtecks ABCD (die Breite ergibt sich als Summe 3x+x+x+2x = 7x).",
+      "Berechne die Flächeninhalte der beiden weiss dargestellten Dreiecke einzeln (Grundseite mal Höhe geteilt durch 2, Höhe jeweils 8 cm).",
+      "Der graue Flächeninhalt ist die Rechtecksfläche minus die beiden Dreiecksflächen. Setze das gleich 154 cm² und löse nach x auf.",
     ],
     },
     {
@@ -286,6 +331,9 @@ const RAW_PROBLEMS = [
     category: "Geometrie",
     points: 1,
     hints: [
+      "Die Strecke x bildet mit der Höhendifferenz der beiden Stangen und ihrem horizontalen Abstand ein rechtwinkliges Dreieck.",
+      "Die Höhendifferenz der beiden Stangen beträgt 8 m − 2.75 m = 5.25 m. Lies aus dem Gitter (1 m pro Kästchen) den horizontalen Abstand zwischen den beiden Stangen ab.",
+      "Wende den Satz des Pythagoras an: x = √(Höhendifferenz² + horizontaler Abstand²).",
     ],
     },
     {
@@ -297,6 +345,9 @@ const RAW_PROBLEMS = [
     category: "Geometrie",
     points: 2,
     hints: [
+      "Der Zeltkörper lässt sich als Prisma mit trapezförmiger Querschnittsfläche auffassen: Berechne zuerst die Fläche dieses Trapezes (Parallelseiten 2.75 m und 8 m).",
+      "Das Volumen = mittlere Höhe (Durchschnitt der beiden Stangenlängen) mal Grundfläche (Länge mal Breite des rechteckigen Bodens).",
+      "Lies Länge und Breite des rechteckigen Bodens aus dem Gitter ab (1 m pro Kästchen) und setze alle Werte in die Volumenformel ein.",
     ],
     },
     {
@@ -308,6 +359,9 @@ const RAW_PROBLEMS = [
     category: "Geometrie",
     points: 1,
     hints: [
+      "Zähle, wie viele Strecken die Ausgangsfigur (das Dreieck) hat, und überlege, was bei jedem Schritt mit JEDER einzelnen Strecke passiert.",
+      "Jede Strecke wird durch einen Zacken ersetzt – dabei entstehen aus einer Strecke jeweils 4 neue Strecken.",
+      "Die Anzahl Strecken vervierfacht sich also bei jedem Schritt. Nutze die Tabelle, um von Figur zu Figur hochzuzählen bis Figur Nummer 4.",
     ],
     },
     {
@@ -319,6 +373,9 @@ const RAW_PROBLEMS = [
     category: "Geometrie",
     points: 1,
     hints: [
+      "Du hast in der Tabelle gesehen, dass sich die Streckenzahl bei jedem Schritt vervierfacht (mal 4).",
+      "Das bedeutet, die Streckenzahl folgt einer Potenz von 4, multipliziert mit der Streckenzahl der Ausgangsfigur (3).",
+      "Stelle einen Term der Form 3 · 4^n auf, wobei n die Figurnummer ist.",
     ],
     },
 ];
