@@ -184,6 +184,36 @@ const RAW_PROBLEMS = [
     hints: [
     ],
   },
+  {
+    id: "2026-4a",
+    latex: "\\text{Im Folgenden werden drei verschiedene Situationen beschrieben. Stelle jeweils eine Gleichung mit der Unbekannten x auf, welche die Situation des Textes beschreibt. Ausser x darf keine weitere Unbekannte in der Gleichung vorkommen. Die Gleichungen sollen nicht gelöst und auch nicht vereinfacht werden! } \n Der Eintritt in einen Vergnügungspark kostet für Erwachsene CHF32 und für Kinder CHF18. Eine Reisegruppe mit 45 Personen bezahlt insgesamt CHF 1034 für den Eintritt. Gesucht ist die Anzahl Erwachsener der Reisegruppe. x = Anzahl Erwachsener der Reisegruppe ",
+    answer: "32x+18(45-x) =1034",
+    year: 2026,
+    category: "Gleichung",
+    points: 1,
+    hints: [
+    ],
+  },
+  {
+    id: "2026-4b",
+    latex: "\\text{Im Folgenden werden drei verschiedene Situationen beschrieben. Stelle jeweils eine Gleichung mit der Unbekannten x auf, welche die Situation des Textes beschreibt. Ausser x darf keine weitere Unbekannte in der Gleichung vorkommen. Die Gleichungen sollen nicht gelöst und auch nicht vereinfacht werden! } \n Alina hat 5-mal so viel Geld wie Mia. Alina gibt CHF 600 aus, Mia gibt CHF 150 aus. Jetzt haben beide zusammen 3-mal so viel Geld wie Mia zu Beginn hatte. Gesucht ist Mias Geld in CHF zu Beginn. x = Mias Geld in CHF zu Beginn ",
+    answer: "5x-600+x-150=3x",
+    year: 2026,
+    category: "Gleichung",
+    points: 1,
+    hints: [
+    ],
+  },
+  {
+    id: "2026-4c",
+    latex: "\\text{Im Folgenden werden drei verschiedene Situationen beschrieben. Stelle jeweils eine Gleichung mit der Unbekannten x auf, welche die Situation des Textes beschreibt. Ausser x darf keine weitere Unbekannte in der Gleichung vorkommen. Die Gleichungen sollen nicht gelöst und auch nicht vereinfacht werden! } \n Gesucht ist eine Zahl. Die Hälfte vom Dreifachen der um 8 verkleinerten Zahl ist um 2 grösser als das Fünfache der Zahl. x = gesuchte Zahl ",
+    answer: "3(x-8)/2=5x+2",
+    year: 2026,
+    category: "Gleichung",
+    points: 1,
+    hints: [
+    ],
+  },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
