@@ -540,6 +540,14 @@ async function loadMeta() {
 }
 
 // ---------- Uebungsmodus ----------
+// Kuerzt lange Aufgabentexte fuer die Dropdown-Beschriftung. Ohne das kann ein einzelnes,
+// sehr breites <option> (z.B. eine lange Textaufgabe) mobilen Browsern (v.a. iOS Safari) das
+// gesamte Seitenlayout "verzerren": WebKit misst die Select-Box am breitesten Optionstext und
+// zoomt dann die komplette Seite raus, damit diese eine Box hineinpasst.
+function truncate(text, maxLength) {
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
 async function loadUebungProblems() {
   const year = document.getElementById("uebung-year").value;
   const category = document.getElementById("uebung-category").value;
@@ -554,7 +562,7 @@ async function loadUebungProblems() {
     return;
   }
   select.innerHTML = data
-    .map((p) => `<option value="${p.id}">[${p.year} · ${p.category} · ${p.points} P.] ${p.text}</option>`)
+    .map((p) => `<option value="${p.id}">[${p.year} · ${p.category} · ${p.points} P.] ${truncate(p.text, 55)}</option>`)
     .join("");
   state.uebungProblems = data;
 }
