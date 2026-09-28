@@ -237,6 +237,7 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-6",
+    text: "Unten sind Längsschnitte von vier prismenförmigen Gefässen abgebildet. Alle Gefässe sind am Anfang leer. Dann werden sie mit konstantem Zufluss gefüllt. Ein Füllgraph gibt die Füllhöhe im Gefäss in Abhängigkeit der Zeit an. Ordne jedem Gefäss den passenden Füllgraphen zu.",
     answer: "1-F, 2-D, 3-A, 4-B",
     year: 2026,
     images: ["/images/problem-2026-6.png"],
@@ -271,7 +272,8 @@ function deriveTextFromLatex(latex) {
 
 export const PROBLEMS = RAW_PROBLEMS.map((p) => ({
   ...p,
-  text: p.text ?? deriveTextFromLatex(p.latex),
+  // Fehlen text UND latex, gaebe es sonst einen Absturz beim Serverstart (siehe deriveTextFromLatex).
+  text: p.text ?? (p.latex ? deriveTextFromLatex(p.latex) : ""),
   images: p.images ?? [],
   hints: p.hints ?? [],
 }));
