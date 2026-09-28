@@ -214,6 +214,37 @@ const RAW_PROBLEMS = [
     hints: [
     ],
   },
+  {
+    id: "2026-5a",
+    latex: "\\text{Die Gemeinde Rist besteht aus den Dörfern Unterrist und Oberrist.\nBei einer Abstimmung an einer Gemeindeversammlung haben alle Anwesenden entweder mit Ja oder mit Nein gestimmt.\nDie obere Grafik zeigt die Aufteilung der Anwesenden auf die beiden Dörfer der Gemeinde.\nDie unteren Grafiken zeigen die Abstimmungsresultate der beiden Dörfer.\n54 Anwesende aus Oberrist stimmten Ja.\nBerechne, wieviele Anwesende aus Unterrist Nein stimmten.}",
+    answer: "21",
+    year: 2026,
+    images: ["/images/problem-2026-5a.png"],
+    category: "Textaufgabe",
+    points: 2,
+    hints: [
+    ],
+  },
+  {
+    id: "2026-5b",
+    latex: "\\text{Valeria hat 9% ihres Taschengeldes ausgegeben. Dies entspricht 7.5% der CHF 84, die Jan als Taschengeld erhält.\nBerechne das Taschengeld von Valeria.}",
+    answer: "CHF 70 = 70 CHF",
+    year: 2026,
+    category: "Textaufgabe",
+    points: 1,
+    hints: [
+    ],
+  },
+  {
+    id: "2026-6",
+    answer: "1-F, 2-D, 3-A, 4-B",
+    year: 2026,
+    images: ["/images/problem-2026-6.png"],
+    category: "Textaufgabe",
+    points: 2,
+    hints: [
+    ],
+  },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
