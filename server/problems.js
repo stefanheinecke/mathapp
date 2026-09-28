@@ -277,6 +277,50 @@ const RAW_PROBLEMS = [
     hints: [
     ],
     },
+    {
+    id: "2026-9a",
+    latex: "\\text{Vier Stangen stehen senkrecht auf einer Ebene. Je zwei Stangen sind gleich lang. Die vier Stangen bilden das Gerüst eines Zeltes, das in der Abbildung grau dargestellt ist. Der Boden des Zeltes ist ein Rechteck.\n\nBerechne die Länge der Strecke x.}",
+    answer: "x=7.25m",
+    images: ["/images/problem-2026-9a.png"],
+    year: 2026,
+    category: "Geometrie",
+    points: 1,
+    hints: [
+    ],
+    },
+    {
+    id: "2026-9b",
+    latex: "\\text{Berechne das Volumen des Zeltes.}",
+    answer: "x=268.75m^3",
+    images: ["/images/problem-2026-9a.png"],
+    year: 2026,
+    category: "Geometrie",
+    points: 2,
+    hints: [
+    ],
+    },
+    {
+    id: "2026-10a",
+    latex: "\\text{Unten siehst du eine Abfolge von Figuren. Sie beginnt mit einem gleichseitigen Dreieck. Danach wird bei jeder Seite ein gleichseitiger Zacken angesetzt. Alle Strecken einer Figur sind jeweils gleich lang. Dieser Vorgang wird laufend wiederholt.\n\nBerechne die Anzahl Strecken der Figur Nummer 4. Du kannst zur Hilfe die folgende Tabelle benützen.}",
+    answer: "768",
+    images: ["/images/problem-2026-10a.png"],
+    year: 2026,
+    category: "Geometrie",
+    points: 1,
+    hints: [
+    ],
+    },
+    {
+    id: "2026-10b",
+    latex: "\\text{Erstelle einen Term, mit dem man die Anzahl Strecken der Figur Nummer n berechnen kann. (n steht für die Nummer einer beliebigen Figur der Abfolge.)}",
+    answer: "3*4^n=3*2^(2n)",
+    images: ["/images/problem-2026-10a.png"],
+    year: 2026,
+    category: "Geometrie",
+    points: 1,
+    hints: [
+    ],
+    },
 ];
 
 // Grobe, nicht perfekte Rueckuebersetzung von KaTeX-Quelltext in lesbaren Klartext.
