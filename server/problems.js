@@ -109,7 +109,7 @@ const RAW_PROBLEMS = [
     ],  },
     {
     id: "2026-1h",
-    latex: "\\text{Das Volumen der Pyramide beträgt 7296 m^3. Berechne die Höhe h: ",
+    latex: "\\text{Das Volumen der Pyramide beträgt 7296 m^3. Berechne die Höhe h: }",
     images: ["/images/problem-2026-1h.png"],
     answer: "h = 38 = 38m",
     year: 2026,
@@ -176,7 +176,7 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-3b",
-    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √64a2+(−6a)2−√3a\\cdot√27a",
+    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √64a^2+(−6a)^2−√3a\\cdot√27a",
     answer: "a",
     year: 2026,
     category: "Gleichung",
