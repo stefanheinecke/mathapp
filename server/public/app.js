@@ -345,6 +345,96 @@ function openMemoryGame(onComplete) {
   };
 }
 
+// ---------- Bonus-Bubble-Pop (alterniert mit dem Merkspiel) ----------
+const BUBBLEPOP_TIME_LIMIT_SECONDS = 15;
+const BUBBLEPOP_TARGET = 15;
+const BUBBLEPOP_MAX_ON_SCREEN = 5;
+const BUBBLE_COLORS = ["#4fc3f7", "#81c784", "#ffd54f", "#f06292", "#ba68c8", "#ff8a65"];
+
+// Oeffnet das Bubble-Pop-Spiel. onComplete(won) wird genau einmal aufgerufen, sobald das Spiel
+// endet (Zielanzahl erreicht, Zeit abgelaufen oder manuell geschlossen).
+function openBubblePopGame(onComplete) {
+  const overlay = document.getElementById("bubblepop-overlay");
+  const area = document.getElementById("bubblepop-area");
+  const timerEl = document.getElementById("bubblepop-timer");
+  const scoreEl = document.getElementById("bubblepop-score");
+  const resultEl3 = document.getElementById("bubblepop-result");
+  const closeBtn = document.getElementById("btn-bubblepop-close");
+
+  let popped = 0;
+  let finished = false;
+  let timeLeft = BUBBLEPOP_TIME_LIMIT_SECONDS;
+  const activeBubbles = [];
+
+  area.innerHTML = "";
+  resultEl3.classList.add("hidden");
+  resultEl3.textContent = "";
+  timerEl.textContent = `⏱ ${timeLeft}s`;
+  timerEl.classList.remove("low");
+  scoreEl.textContent = `Geplatzt: 0 / ${BUBBLEPOP_TARGET}`;
+  overlay.classList.remove("hidden");
+
+  function spawnBubble() {
+    if (finished) return;
+    const size = 40 + Math.random() * 25;
+    const bubble = document.createElement("button");
+    bubble.type = "button";
+    bubble.className = "bubble";
+    bubble.style.width = `${size}px`;
+    bubble.style.height = `${size}px`;
+    bubble.style.left = `${Math.random() * Math.max(1, area.clientWidth - size)}px`;
+    bubble.style.top = `${Math.random() * Math.max(1, area.clientHeight - size)}px`;
+    bubble.style.background = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+    bubble.addEventListener("click", () => popBubble(bubble));
+    area.appendChild(bubble);
+    activeBubbles.push(bubble);
+  }
+
+  function popBubble(bubble) {
+    if (finished) return;
+    bubble.remove();
+    const idx = activeBubbles.indexOf(bubble);
+    if (idx !== -1) activeBubbles.splice(idx, 1);
+    popped += 1;
+    scoreEl.textContent = `Geplatzt: ${popped} / ${BUBBLEPOP_TARGET}`;
+    if (popped >= BUBBLEPOP_TARGET) {
+      finish(true);
+    } else {
+      spawnBubble();
+    }
+  }
+
+  function finish(won) {
+    if (finished) return;
+    finished = true;
+    clearInterval(timerHandle);
+    activeBubbles.forEach((b) => (b.disabled = true));
+    resultEl3.textContent = won
+      ? "🎉 Geschafft! Du hast einen Zusatzstern verdient!"
+      : "⏰ Zeit abgelaufen – diesmal leider kein Zusatzstern.";
+    resultEl3.classList.remove("hidden");
+    onComplete(won);
+  }
+
+  for (let i = 0; i < BUBBLEPOP_MAX_ON_SCREEN; i++) spawnBubble();
+
+  const timerHandle = setInterval(() => {
+    timeLeft -= 1;
+    timerEl.textContent = `⏱ ${timeLeft}s`;
+    if (timeLeft <= 3) timerEl.classList.add("low");
+    if (timeLeft <= 0) finish(false);
+  }, 1000);
+
+  closeBtn.onclick = () => {
+    if (!finished) finish(false);
+    overlay.classList.add("hidden");
+    area.innerHTML = "";
+  };
+}
+
+// Welches Bonus-Spiel als naechstes angeboten wird; wechselt bei jedem Spielstart.
+let nextBonusGame = "memory"; // 'memory' | 'bubble'
+
 let currentTotalStars = 0;
 
 async function refreshStarsTotal() {
@@ -625,15 +715,19 @@ submitBtn.addEventListener("click", async () => {
     };
     state.results.push(resultEntry);
 
-    // Bonus-Merkspiel: nur im Uebungsmodus und nur nach einer vollstaendig richtigen Loesung.
+    // Bonus-Spiel: nur im Uebungsmodus und nur nach einer vollstaendig richtigen Loesung.
+    // Alterniert bei jedem Spielstart zwischen Merkspiel und Bubble-Pop.
     const bonusBtn = document.getElementById("btn-play-bonus-game");
     if (state.mode === "uebung" && resultEntry.fullyCorrect) {
       bonusBtn.classList.remove("hidden");
       bonusBtn.disabled = false;
-      bonusBtn.textContent = "🎮 Bonus-Spiel spielen (+1 ⭐)";
+      const gameLabel = nextBonusGame === "memory" ? "🧠 Merkspiel" : "🫧 Bubble-Pop";
+      bonusBtn.textContent = `🎮 Bonus-Spiel: ${gameLabel} (+1 ⭐)`;
       bonusBtn.onclick = () => {
         bonusBtn.disabled = true;
-        openMemoryGame((won) => {
+        const openGame = nextBonusGame === "memory" ? openMemoryGame : openBubblePopGame;
+        nextBonusGame = nextBonusGame === "memory" ? "bubble" : "memory";
+        openGame((won) => {
           resultEntry.bonusStars = won ? 1 : 0;
           bonusBtn.textContent = won ? "🎉 Zusatzstern verdient!" : "😕 Kein Zusatzstern diesmal";
         });

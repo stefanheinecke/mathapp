@@ -88,7 +88,7 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-1f",
-    latex: "\\text{Wandle in ml um:} 2.3 dm^3",
+    latex: "\\text{Wandle in ml um: } 2.3 dm^3",
     answer: "2300 ml",
     year: 2026,
     category: "Grössenumrechnungen",

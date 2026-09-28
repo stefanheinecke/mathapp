@@ -364,6 +364,41 @@ button {
   font-weight: 600;
 }
 
+.bubblepop-score {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bubblepop-area {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background: linear-gradient(180deg, #e3f2fd, #bbdefb);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  box-shadow: inset -4px -4px 8px rgba(0, 0, 0, 0.15), inset 4px 4px 8px rgba(255, 255, 255, 0.4);
+  animation: bubble-pop-in 0.15s ease-out;
+}
+
+@keyframes bubble-pop-in {
+  from {
+    transform: scale(0.3);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .summary-score {
   font-size: 1.4rem;
   font-weight: 700;
