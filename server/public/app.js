@@ -348,6 +348,19 @@ function renderMath(el, latex, fallbackText) {
   }
 }
 
+// Fuegt Text in ein Element ein und wandelt darin enthaltene "\n" in echte <br>-Zeilenumbrueche
+// um - ein reiner Text-Node wuerde das Newline-Zeichen sonst per CSS (white-space: normal) als
+// Leerzeichen darstellen, der Umbruch waere unsichtbar.
+function appendTextWithLineBreaks(el, text) {
+  const lines = text.split("\n");
+  lines.forEach((line, i) => {
+    el.appendChild(document.createTextNode(line));
+    if (i < lines.length - 1) {
+      el.appendChild(document.createElement("br"));
+    }
+  });
+}
+
 // Rendert eine Aufgabenstellung, die aus laengerem Beschreibungstext (in \text{...}) und
 // kurzen Mathe-Ausdruecken gemischt sein kann. KaTeX bietet innerhalb von \text{...} keine
 // Umbruchstellen fuer den Browser (Leerzeichen werden als feste Abstaende, nicht als
@@ -364,7 +377,7 @@ function renderProblemStatement(el, latex, fallbackText) {
     const parts = latex.split(/\\text\{([^{}]*)\}/g);
     parts.forEach((part, i) => {
       if (i % 2 === 1) {
-        el.appendChild(document.createTextNode(part));
+        appendTextWithLineBreaks(el, part);
       } else if (part.trim()) {
         const span = document.createElement("span");
         window.katex.render(part, span, { throwOnError: false, displayMode: false });
