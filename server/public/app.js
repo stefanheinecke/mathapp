@@ -1138,7 +1138,12 @@ async function loadUebungProblems() {
     return;
   }
   select.innerHTML = data
-    .map((p) => `<option value="${p.id}">[${p.year} · ${p.category} · ${p.points} P.] ${truncate(p.text, 55)}</option>`)
+    .map((p) => {
+      // Aufgabennummer aus der id ableiten (z.B. "2026-1a1" -> "1a1"), damit man die Aufgabe im
+      // Dropdown eindeutig wiederfindet, auch wenn mehrere Aufgaben gleiches Jahr/Kategorie haben.
+      const exerciseNumber = p.id.slice(p.id.indexOf("-") + 1);
+      return `<option value="${p.id}">[${p.year} · ${exerciseNumber} · ${p.category} · ${p.points} P.] ${truncate(p.text, 55)}</option>`;
+    })
     .join("");
   state.uebungProblems = data;
 }
