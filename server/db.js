@@ -1,4 +1,5 @@
 import pg from "pg";
+import { hashPassword } from "./auth.js";
 
 const { Pool } = pg;
 
@@ -43,6 +44,71 @@ export async function initDb() {
   // bereits bestehende Tabellen aus frueheren Versionen des Prototyps).
   await pool.query(`ALTER TABLE results ADD COLUMN IF NOT EXISTS total_points NUMERIC NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE results ADD COLUMN IF NOT EXISTS awarded_points NUMERIC NOT NULL DEFAULT 0;`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      is_admin BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await ensureAdminUser();
+}
+
+// Legt den Admin-Account "Stefan" beim ersten Start an (Passwort kommt aus ADMIN_PASSWORD, nie
+// hartcodiert). Existiert er schon, wird nichts veraendert - Passwortaenderungen laufen ueber die
+// normale Admin-Oberflaeche, nicht ueber einen Neustart.
+async function ensureAdminUser() {
+  const { rows } = await pool.query("SELECT id FROM users WHERE username = $1", ["Stefan"]);
+  if (rows.length > 0) return;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    console.error("Fehler: ADMIN_PASSWORD ist nicht gesetzt. Bitte .env anlegen (siehe .env.example).");
+    process.exit(1);
+  }
+  await pool.query(
+    "INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, true)",
+    ["Stefan", hashPassword(adminPassword)]
+  );
+  console.log("Admin-Benutzer 'Stefan' wurde angelegt.");
+}
+
+export async function findUserByUsername(username) {
+  const { rows } = await pool.query(
+    "SELECT id, username, password_hash, is_admin, created_at FROM users WHERE username = $1",
+    [username]
+  );
+  return rows[0] || null;
+}
+
+export async function listUsers() {
+  const { rows } = await pool.query(
+    "SELECT username, is_admin, created_at FROM users ORDER BY created_at ASC"
+  );
+  return rows;
+}
+
+export async function createUser(username, password) {
+  const { rows } = await pool.query(
+    "INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, false) RETURNING username, is_admin, created_at",
+    [username, hashPassword(password)]
+  );
+  return rows[0];
+}
+
+export async function updateUserPassword(username, password) {
+  const { rowCount } = await pool.query("UPDATE users SET password_hash = $1 WHERE username = $2", [
+    hashPassword(password),
+    username,
+  ]);
+  return rowCount > 0;
+}
+
+export async function deleteUser(username) {
+  const { rowCount } = await pool.query("DELETE FROM users WHERE username = $1", [username]);
+  return rowCount > 0;
 }
 
 // Speichert einen abgeschlossenen Lauf (ein Uebungs-Ergebnis oder eine ganze Pruefung).

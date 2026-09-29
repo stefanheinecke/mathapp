@@ -13,13 +13,30 @@
   />
 </head>
 <body>
-  <div class="app-layout">
+  <!-- Login-Bildschirm: wird angezeigt, solange kein gueltiges Session-Token vorliegt -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h1>Mathe-Übung</h1>
+      <h2>Anmelden</h2>
+      <label for="login-username">Benutzername:</label>
+      <input id="login-username" type="text" maxlength="40" autocomplete="username" />
+      <label for="login-password">Passwort:</label>
+      <input id="login-password" type="password" maxlength="200" autocomplete="current-password" />
+      <p id="login-error" class="login-error hidden"></p>
+      <div class="toolbar">
+        <button id="btn-login">Anmelden</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-layout" class="app-layout hidden">
     <nav class="sidebar">
       <h1>Mathe-Übung</h1>
       <button id="nav-start" class="nav-btn active">🏠 Start</button>
       <button id="nav-uebung" class="nav-btn">📖 Übungsmodus</button>
       <button id="nav-pruefung" class="nav-btn">📝 Prüfungsmodus</button>
       <button id="nav-history" class="nav-btn">📊 Meine Ergebnisse</button>
+      <button id="nav-admin" class="nav-btn hidden">🔑 Admin</button>
       <p id="stars-total" class="stars-total hidden"></p>
       <div id="level-info" class="level-info hidden">
         <p id="level-title" class="level-title"></p>
@@ -28,14 +45,14 @@
         </div>
         <p id="level-next" class="level-next"></p>
       </div>
+      <p id="logged-in-as" class="logged-in-as"></p>
+      <button id="btn-logout" class="nav-btn">🚪 Abmelden</button>
     </nav>
 
     <main>
-    <!-- Startbildschirm: Name eingeben -->
+    <!-- Startbildschirm -->
     <section id="screen-start" class="screen">
       <h2>Willkommen!</h2>
-      <label for="player-name">Dein Name:</label>
-      <input id="player-name" type="text" maxlength="60" placeholder="z.B. Alex" />
       <p>Wähle links einen Modus, um loszulegen.</p>
     </section>
 
@@ -153,6 +170,21 @@
     <section id="screen-history" class="screen hidden">
       <h2>Meine Ergebnisse</h2>
       <div id="history-list"></div>
+    </section>
+
+    <!-- Nur fuer den Admin ("Stefan") sichtbar: Benutzerverwaltung -->
+    <section id="screen-admin" class="screen hidden">
+      <h2>🔑 Admin: Benutzerverwaltung</h2>
+      <div id="admin-users-list"></div>
+      <h3>Neuen Benutzer anlegen</h3>
+      <label for="admin-new-username">Benutzername:</label>
+      <input id="admin-new-username" type="text" maxlength="40" autocomplete="off" />
+      <label for="admin-new-password">Passwort:</label>
+      <input id="admin-new-password" type="password" maxlength="200" autocomplete="new-password" />
+      <p id="admin-error" class="login-error hidden"></p>
+      <div class="toolbar">
+        <button id="btn-admin-create-user">Benutzer anlegen</button>
+      </div>
     </section>
     </main>
   </div>

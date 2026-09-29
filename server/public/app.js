@@ -467,9 +467,13 @@ async function runLivePreview() {
 const API_BASE_URL = window.MATHEAPP_API_BASE_URL || "";
 
 async function api(url, options) {
+  const opts = { ...(options || {}) };
+  if (state.token) {
+    opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${state.token}` };
+  }
   let res;
   try {
-    res = await fetch(`${API_BASE_URL}${url}`, options);
+    res = await fetch(`${API_BASE_URL}${url}`, opts);
   } catch (err) {
     // fetch() selbst schlaegt fehl bei Netzwerkabbruch/Server-Crash (nicht nur bei HTTP-
     // Fehlerstatus) - ohne diesen catch wuerde das hier als unbehandelte Exception durchschlagen
@@ -481,6 +485,12 @@ async function api(url, options) {
     data = await res.json();
   } catch {
     data = {};
+  }
+  // Ein abgelaufenes/ungueltiges Token (Server neu gestartet, SESSION_SECRET geaendert, Token zu
+  // alt) fuehrt sonst zu lauter kryptischen 401-Fehlern quer durch die App - stattdessen einmal
+  // sauber ausloggen und den Login-Bildschirm zeigen.
+  if (res.status === 401 && state.token && !url.startsWith("/api/auth/login")) {
+    logout();
   }
   return { ok: res.ok, status: res.status, data };
 }
@@ -660,7 +670,9 @@ function renderProblemStatement(el, latex, fallbackText) {
 
 // ---------- App-Zustand ----------
 const state = {
-  playerName: localStorage.getItem("matheapp_playerName") || "",
+  username: localStorage.getItem("matheapp_username") || "",
+  token: localStorage.getItem("matheapp_token") || "",
+  isAdmin: localStorage.getItem("matheapp_isAdmin") === "true",
   meta: { years: [], categories: [] },
   mode: null, // 'uebung' | 'pruefung_jahr' | 'pruefung_kategorie'
   scope: null, // problemId (uebung) oder Jahr/Kategorie (pruefung)
@@ -671,21 +683,6 @@ const state = {
   hintsUsedForCurrent: false,
   starsBeforeRun: 0,
 };
-
-const playerNameInput = document.getElementById("player-name");
-playerNameInput.value = state.playerName;
-
-function requirePlayerName() {
-  const name = playerNameInput.value.trim();
-  if (!name) {
-    alert("Bitte zuerst deinen Namen eingeben.");
-    playerNameInput.focus();
-    return null;
-  }
-  state.playerName = name;
-  localStorage.setItem("matheapp_playerName", name);
-  return name;
-}
 
 // ---------- Level-System (10 Sterne pro Level, 100 Level = 1000 Sterne) ----------
 // Ein eigener Titel pro Level (Index 0 = Level 1, Index 99 = Level 100).
@@ -1048,12 +1045,12 @@ let currentTotalStars = 0;
 
 async function refreshStarsTotal() {
   const starsEl = document.getElementById("stars-total");
-  if (!state.playerName) {
+  if (!state.username) {
     starsEl.classList.add("hidden");
     document.getElementById("level-info").classList.add("hidden");
     return;
   }
-  const { ok, data } = await api(`/api/results?playerName=${encodeURIComponent(state.playerName)}`);
+  const { ok, data } = await api("/api/results");
   if (!ok || !Array.isArray(data)) {
     starsEl.classList.add("hidden");
     document.getElementById("level-info").classList.add("hidden");
@@ -1125,7 +1122,6 @@ async function goToStart() {
 }
 
 async function goToUebung() {
-  if (!requirePlayerName()) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-uebung");
   showScreen("screen-uebung-setup");
@@ -1164,7 +1160,6 @@ function selectPruefungVariant(variant) {
 }
 
 async function goToPruefungSetup() {
-  if (!requirePlayerName()) return;
   if (!confirmLeaveTask()) return;
   pruefungVariant = null;
   document.getElementById("btn-pruefung-jahr").classList.remove("active");
@@ -1410,7 +1405,6 @@ async function finishRun() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      playerName: state.playerName,
       mode: state.mode,
       scope: String(state.scope),
       details: state.results,
@@ -1455,13 +1449,12 @@ document.getElementById("btn-summary-restart").addEventListener("click", goToSta
 
 // ---------- Verlauf ----------
 async function goToHistory() {
-  if (!requirePlayerName()) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-history");
   showScreen("screen-history");
   const listEl = document.getElementById("history-list");
   listEl.textContent = "Lade ...";
-  const { ok, data } = await api(`/api/results?playerName=${encodeURIComponent(state.playerName)}`);
+  const { ok, data } = await api("/api/results");
   if (!ok || !Array.isArray(data) || data.length === 0) {
     listEl.textContent = "Noch keine Ergebnisse gespeichert.";
     return;
@@ -1563,7 +1556,199 @@ function renderHistoryProblemCard(d) {
 
 document.getElementById("nav-history").addEventListener("click", goToHistory);
 
+// ---------- Login / Logout ----------
+function showLoginScreen() {
+  document.getElementById("login-screen").classList.remove("hidden");
+  document.getElementById("app-layout").classList.add("hidden");
+}
+
+function showApp() {
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("app-layout").classList.remove("hidden");
+  document.getElementById("logged-in-as").textContent = `Angemeldet als: ${state.username}`;
+  document.getElementById("nav-admin").classList.toggle("hidden", !state.isAdmin);
+}
+
+function logout() {
+  state.token = "";
+  state.username = "";
+  state.isAdmin = false;
+  localStorage.removeItem("matheapp_token");
+  localStorage.removeItem("matheapp_username");
+  localStorage.removeItem("matheapp_isAdmin");
+  showLoginScreen();
+}
+
+document.getElementById("btn-logout").addEventListener("click", logout);
+
+document.getElementById("btn-login").addEventListener("click", async () => {
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+  const errorEl = document.getElementById("login-error");
+  errorEl.classList.add("hidden");
+  if (!username || !password) {
+    errorEl.textContent = "Bitte Benutzername und Passwort eingeben.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  const { ok, data } = await api("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!ok) {
+    errorEl.textContent = data.error || "Anmeldung fehlgeschlagen.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  state.token = data.token;
+  state.username = data.username;
+  state.isAdmin = Boolean(data.isAdmin);
+  localStorage.setItem("matheapp_token", state.token);
+  localStorage.setItem("matheapp_username", state.username);
+  localStorage.setItem("matheapp_isAdmin", String(state.isAdmin));
+  document.getElementById("login-password").value = "";
+  await initAppAfterLogin();
+});
+
+// Enter-Taste im Passwortfeld loest den Login aus (bessere UX als nur Klick auf den Button).
+document.getElementById("login-password").addEventListener("keydown", (evt) => {
+  if (evt.key === "Enter") document.getElementById("btn-login").click();
+});
+
+async function initAppAfterLogin() {
+  showApp();
+  await loadMeta();
+  await refreshStarsTotal();
+}
+
+// Beim Laden pruefen, ob ein gespeichertes Token noch gueltig ist (Server-Neustart, geaendertes
+// SESSION_SECRET oder Ablauf wuerden es ungueltig machen) - sonst direkt zum Login-Bildschirm.
+async function checkExistingSession() {
+  if (!state.token) {
+    showLoginScreen();
+    return;
+  }
+  const { ok, data } = await api("/api/auth/me");
+  if (!ok) {
+    logout();
+    return;
+  }
+  state.username = data.username;
+  state.isAdmin = Boolean(data.isAdmin);
+  localStorage.setItem("matheapp_username", state.username);
+  localStorage.setItem("matheapp_isAdmin", String(state.isAdmin));
+  await initAppAfterLogin();
+}
+
+// ---------- Admin: Benutzerverwaltung (nur sichtbar/erreichbar fuer "Stefan") ----------
+function renderAdminUserRow(u) {
+  const row = document.createElement("div");
+  row.className = "admin-user-row";
+
+  const nameEl = document.createElement("span");
+  nameEl.className = "admin-username";
+  nameEl.textContent = u.username;
+  row.appendChild(nameEl);
+
+  if (u.is_admin) {
+    const badge = document.createElement("span");
+    badge.className = "admin-badge";
+    badge.textContent = "Admin";
+    row.appendChild(badge);
+  }
+
+  const pwInput = document.createElement("input");
+  pwInput.type = "password";
+  pwInput.placeholder = "Neues Passwort";
+  pwInput.maxLength = 200;
+  row.appendChild(pwInput);
+
+  const pwBtn = document.createElement("button");
+  pwBtn.className = "btn-secondary";
+  pwBtn.textContent = "Passwort ändern";
+  pwBtn.addEventListener("click", async () => {
+    const password = pwInput.value;
+    if (password.length < 6) {
+      alert("Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
+    const { ok, data } = await api(`/api/admin/users/${encodeURIComponent(u.username)}/password`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!ok) {
+      alert(data.error || "Passwort konnte nicht geändert werden.");
+      return;
+    }
+    pwInput.value = "";
+    alert(`Passwort für ${u.username} wurde geändert.`);
+  });
+  row.appendChild(pwBtn);
+
+  // Der fest verdrahtete Admin-Account "Stefan" kann nicht geloescht werden (siehe server.js).
+  if (u.username !== "Stefan") {
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn-secondary";
+    delBtn.textContent = "Löschen";
+    delBtn.addEventListener("click", async () => {
+      if (!confirm(`Benutzer "${u.username}" wirklich löschen?`)) return;
+      const { ok, data } = await api(`/api/admin/users/${encodeURIComponent(u.username)}`, { method: "DELETE" });
+      if (!ok) {
+        alert(data.error || "Benutzer konnte nicht gelöscht werden.");
+        return;
+      }
+      renderAdminUsers();
+    });
+    row.appendChild(delBtn);
+  }
+
+  return row;
+}
+
+async function renderAdminUsers() {
+  const listEl = document.getElementById("admin-users-list");
+  listEl.textContent = "Lade ...";
+  const { ok, data } = await api("/api/admin/users");
+  if (!ok || !Array.isArray(data)) {
+    listEl.textContent = "Benutzerliste konnte nicht geladen werden.";
+    return;
+  }
+  listEl.innerHTML = "";
+  data.forEach((u) => listEl.appendChild(renderAdminUserRow(u)));
+}
+
+async function goToAdmin() {
+  if (!state.isAdmin) return;
+  if (!confirmLeaveTask()) return;
+  setActiveNav("nav-admin");
+  showScreen("screen-admin");
+  await renderAdminUsers();
+}
+
+document.getElementById("nav-admin").addEventListener("click", goToAdmin);
+
+document.getElementById("btn-admin-create-user").addEventListener("click", async () => {
+  const usernameInput = document.getElementById("admin-new-username");
+  const passwordInput = document.getElementById("admin-new-password");
+  const errorEl = document.getElementById("admin-error");
+  errorEl.classList.add("hidden");
+  const { ok, data } = await api("/api/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: usernameInput.value.trim(), password: passwordInput.value }),
+  });
+  if (!ok) {
+    errorEl.textContent = data.error || "Benutzer konnte nicht angelegt werden.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  usernameInput.value = "";
+  passwordInput.value = "";
+  await renderAdminUsers();
+});
+
 // ---------- Initialisierung ----------
-loadMeta();
-refreshStarsTotal();
+checkExistingSession();
 

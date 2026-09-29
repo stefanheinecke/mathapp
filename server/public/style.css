@@ -16,6 +16,87 @@ body {
   min-height: 100vh;
 }
 
+/* Login-Bildschirm: eigenstaendig ausserhalb von .app-layout, damit vor dem Einloggen nichts vom
+   Rest der App (Sidebar, Aufgaben, Admin-Bereich) sichtbar oder erreichbar ist. */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f4;
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  width: min(360px, 90vw);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.login-card h1 {
+  margin: 0 0 0.25rem;
+}
+
+.login-card h2 {
+  margin: 0 0 1rem;
+  color: #555;
+  font-size: 1.05rem;
+}
+
+.login-card label,
+#screen-admin label {
+  display: block;
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+
+.login-card input,
+#screen-admin input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin-top: 0.25rem;
+}
+
+.login-error {
+  color: #a30000;
+  background: #fdecea;
+  border: 1px solid #f3b3ab;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.logged-in-as {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: #666;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-user-row .admin-username {
+  flex: 1;
+  font-weight: 600;
+}
+
+.admin-user-row .admin-badge {
+  font-size: 0.8rem;
+  color: #b8860b;
+}
+
 .sidebar {
   flex: 0 0 220px;
   background: #fff;

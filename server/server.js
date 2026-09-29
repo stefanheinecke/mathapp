@@ -6,7 +6,17 @@ import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import { checkSteps } from "./mathCheck.js";
 import { PROBLEMS, filterProblems, listYears, listCategories } from "./problems.js";
-import { initDb, saveResult, getResultsForPlayer } from "./db.js";
+import {
+  initDb,
+  saveResult,
+  getResultsForPlayer,
+  findUserByUsername,
+  listUsers,
+  createUser,
+  updateUserPassword,
+  deleteUser,
+} from "./db.js";
+import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -121,14 +131,137 @@ app.use(cors());
 app.use(express.json({ limit: "20mb" })); // Pruefungsmodus speichert pro Aufgabe ein Bild mit - bei vielen Aufgaben summiert sich das.
 app.use(express.static(path.join(__dirname, "public")));
 
+function getBearerToken(req) {
+  const header = req.headers.authorization || "";
+  const match = /^Bearer (.+)$/.exec(header);
+  return match ? match[1] : null;
+}
+
+// Alle Routen ausser /api/auth/login verlangen ein gueltiges Session-Token. req.user enthaelt
+// dann {username, isAdmin} - die Server-seitige Wahrheit ueber "wer bin ich", nie ein
+// client-gelieferter Name (verhindert, dass sich jemand als anderer Nutzer ausgibt).
+function requireAuth(req, res, next) {
+  const payload = verifyToken(getBearerToken(req));
+  if (!payload) {
+    return res.status(401).json({ error: "Bitte zuerst anmelden." });
+  }
+  req.user = payload;
+  next();
+}
+
+// Nur "Stefan" (der beim Start via ADMIN_PASSWORD angelegte Account) darf Benutzer verwalten.
+function requireAdmin(req, res, next) {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: "Nur der Admin darf das." });
+  }
+  next();
+}
+
+const USERNAME_RE = /^[A-Za-z0-9_.-]{3,40}$/;
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (typeof username !== "string" || typeof password !== "string" || !username.trim() || !password) {
+      return res.status(400).json({ error: "Benutzername und Passwort sind erforderlich." });
+    }
+    const trimmedUsername = username.trim();
+    if (isLoginRateLimited(trimmedUsername)) {
+      return res.status(429).json({ error: "Zu viele Fehlversuche. Bitte spaeter erneut versuchen." });
+    }
+    const user = await findUserByUsername(trimmedUsername);
+    // Bewusst dieselbe generische Fehlermeldung fuer "Benutzer existiert nicht" und "Passwort
+    // falsch" - sonst koennte man erraten, welche Benutzernamen existieren (User-Enumeration).
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      recordFailedLogin(trimmedUsername);
+      return res.status(401).json({ error: "Benutzername oder Passwort falsch." });
+    }
+    clearFailedLogins(trimmedUsername);
+    const token = createToken(user.username, user.is_admin);
+    res.json({ token, username: user.username, isAdmin: user.is_admin });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Anmeldung fehlgeschlagen.", details: err?.message });
+  }
+});
+
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  res.json({ username: req.user.username, isAdmin: req.user.isAdmin });
+});
+
+// ---------- Admin: Benutzerverwaltung (nur "Stefan") ----------
+app.get("/api/admin/users", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    res.json(await listUsers());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Benutzerliste konnte nicht geladen werden.", details: err?.message });
+  }
+});
+
+app.post("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (typeof username !== "string" || !USERNAME_RE.test(username.trim())) {
+      return res.status(400).json({ error: "Benutzername muss 3-40 Zeichen (Buchstaben/Zahlen/_.-) haben." });
+    }
+    if (typeof password !== "string" || password.length < 6 || password.length > 200) {
+      return res.status(400).json({ error: "Passwort muss mindestens 6 Zeichen lang sein." });
+    }
+    const trimmedUsername = username.trim();
+    if (await findUserByUsername(trimmedUsername)) {
+      return res.status(409).json({ error: "Dieser Benutzername existiert bereits." });
+    }
+    const user = await createUser(trimmedUsername, password);
+    res.status(201).json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Benutzer konnte nicht angelegt werden.", details: err?.message });
+  }
+});
+
+app.put("/api/admin/users/:username/password", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (typeof password !== "string" || password.length < 6 || password.length > 200) {
+      return res.status(400).json({ error: "Passwort muss mindestens 6 Zeichen lang sein." });
+    }
+    const ok = await updateUserPassword(req.params.username, password);
+    if (!ok) return res.status(404).json({ error: "Unbekannter Benutzer." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Passwort konnte nicht geaendert werden.", details: err?.message });
+  }
+});
+
+app.delete("/api/admin/users/:username", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    // Schutz vor versehentlichem Aussperren: der fest verdrahtete Admin-Account und der eigene,
+    // gerade eingeloggte Account koennen nicht geloescht werden.
+    if (req.params.username === "Stefan") {
+      return res.status(400).json({ error: "Der Admin-Account 'Stefan' kann nicht geloescht werden." });
+    }
+    if (req.params.username === req.user.username) {
+      return res.status(400).json({ error: "Du kannst deinen eigenen Account nicht loeschen." });
+    }
+    const ok = await deleteUser(req.params.username);
+    if (!ok) return res.status(404).json({ error: "Unbekannter Benutzer." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Benutzer konnte nicht geloescht werden.", details: err?.message });
+  }
+});
+
 // Liefert die verfuegbaren Jahre/Kategorien fuer die Auswahl-Dropdowns im Frontend.
-app.get("/api/meta", (_req, res) => {
+app.get("/api/meta", requireAuth, (_req, res) => {
   res.json({ years: listYears(), categories: listCategories() });
 });
 
 // Uebungsmodus: einzelne Aufgabe nach Jahr/Kategorie filtern.
 // Pruefungsmodus: alle Aufgaben eines Jahres bzw. einer Kategorie abrufen (gleicher Endpunkt).
-app.get("/api/problems", (req, res) => {
+app.get("/api/problems", requireAuth, (req, res) => {
   const { year, category } = req.query;
   const filtered = filterProblems({ year, category });
   res.json(
@@ -146,7 +279,7 @@ app.get("/api/problems", (req, res) => {
 
 // Liefert Hinweise nacheinander (Schritt fuer Schritt), damit nie alle auf einmal im Netzwerk-Tab
 // sichtbar sind. index=0 -> erster Hinweis, index=1 -> zweiter, usw.
-app.get("/api/hint", (req, res) => {
+app.get("/api/hint", requireAuth, (req, res) => {
   const problem = PROBLEMS.find((p) => p.id === String(req.query.problemId || ""));
   if (!problem) {
     return res.status(404).json({ error: "Unbekannte Aufgabe." });
@@ -161,7 +294,7 @@ app.get("/api/hint", (req, res) => {
 
 // Reine Live-Vorschau waehrend des Schreibens: nur MathPix-OCR, keine Bewertung (kein OpenAI-
 // Aufruf), damit haeufige Aufrufe waehrend des Schreibens moeglichst billig bleiben.
-app.post("/api/ocr-preview", async (req, res) => {
+app.post("/api/ocr-preview", requireAuth, async (req, res) => {
   try {
     const { image } = req.body || {};
     if (typeof image !== "string" || !image.startsWith("data:image/png;base64,")) {
@@ -175,7 +308,7 @@ app.post("/api/ocr-preview", async (req, res) => {
   }
 });
 
-app.post("/api/evaluate", async (req, res) => {
+app.post("/api/evaluate", requireAuth, async (req, res) => {
   try {
     const { problemId, image, hintsUsed } = req.body || {};
     if (typeof problemId !== "string" || typeof image !== "string") {
@@ -333,14 +466,11 @@ app.post("/api/evaluate", async (req, res) => {
 const ALLOWED_MODES = new Set(["uebung", "pruefung_jahr", "pruefung_kategorie"]);
 
 // Speichert das Ergebnis eines Uebungsdurchgangs (1 Aufgabe) oder einer ganzen Pruefung
-// (mehrere Aufgaben nach Jahr/Kategorie). Name, Zeitpunkt, Anzahl richtig/gesamt, Prozent und
-// gesammelte Sterne werden in Postgres abgelegt.
-app.post("/api/results", async (req, res) => {
+// (mehrere Aufgaben nach Jahr/Kategorie). Der Name kommt aus dem Session-Token (req.user), nie
+// aus dem Request-Body - sonst koennte man Ergebnisse im Namen eines anderen Nutzers speichern.
+app.post("/api/results", requireAuth, async (req, res) => {
   try {
-    const { playerName, mode, scope, details } = req.body || {};
-    if (typeof playerName !== "string" || playerName.trim().length === 0 || playerName.length > 60) {
-      return res.status(400).json({ error: "playerName ist erforderlich (max. 60 Zeichen)." });
-    }
+    const { mode, scope, details } = req.body || {};
     if (!ALLOWED_MODES.has(mode)) {
       return res.status(400).json({ error: "mode muss uebung, pruefung_jahr oder pruefung_kategorie sein." });
     }
@@ -376,7 +506,7 @@ app.post("/api/results", async (req, res) => {
       });
     }
 
-    const saved = await saveResult({ playerName: playerName.trim(), mode, scope, details });
+    const saved = await saveResult({ playerName: req.user.username, mode, scope, details });
     res.status(201).json(saved);
   } catch (err) {
     console.error(err);
@@ -384,14 +514,10 @@ app.post("/api/results", async (req, res) => {
   }
 });
 
-// Verlauf/Sterne-Stand fuer einen Namen (kein Login, nur einfache Zuordnung per Name).
-app.get("/api/results", async (req, res) => {
+// Verlauf/Sterne-Stand des eingeloggten Nutzers.
+app.get("/api/results", requireAuth, async (req, res) => {
   try {
-    const playerName = String(req.query.playerName || "").trim();
-    if (!playerName) {
-      return res.status(400).json({ error: "playerName Query-Parameter ist erforderlich." });
-    }
-    const results = await getResultsForPlayer(playerName);
+    const results = await getResultsForPlayer(req.user.username);
     res.json(results);
   } catch (err) {
     console.error(err);
