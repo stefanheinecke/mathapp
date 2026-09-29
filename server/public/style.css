@@ -360,6 +360,16 @@ button {
   background: #eee;
 }
 
+.exam-submit-btn {
+  background: #b3261e;
+  color: #fff;
+  border-color: #b3261e;
+}
+
+.exam-submit-btn:hover {
+  background: #8f1d17;
+}
+
 .task-progress {
   font-weight: 600;
   color: #555;

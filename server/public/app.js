@@ -415,6 +415,27 @@ function growCanvas() {
 
 document.getElementById("more-space-btn").addEventListener("click", growCanvas);
 
+// Stellt eine zuvor gespeicherte Antwort wieder her (Pruefungsmodus: Zurueckblaettern zu einer
+// bereits bearbeiteten Aufgabe). Passt die Canvas-Groesse an das gespeicherte Bild an, falls die
+// Aufgabe vorher per "Mehr Platz" vergroessert wurde.
+function restoreCanvasFromImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      liveCanvas.width = img.naturalWidth;
+      liveCanvas.height = img.naturalHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+      hasInk = true;
+      resolve();
+    };
+    img.src = dataUrl;
+  });
+}
+
 // ---------- Live-Vorschau (MathPix OCR waehrend des Schreibens) ----------
 // Ruft MathPix NICHT bei jedem Strich auf, sondern erst nach einer kurzen Schreibpause
 // (Debounce), um die MathPix-Kosten im Rahmen zu halten. Rein informativ - Fehler hier duerfen
@@ -679,10 +700,18 @@ const state = {
   queue: [],
   currentIndex: 0,
   results: [], // { problemId, points, awarded, fullyCorrect }
+  answers: [], // Pruefungsmodus: pro Aufgabe { image, hasInk, hintsUsed, nextHintIndex, revealedHints }
   nextHintIndex: 0,
   hintsUsedForCurrent: false,
   starsBeforeRun: 0,
 };
+
+// Pruefungsmodus (egal ob nach Jahr oder Kategorie) erlaubt freies Vor-/Zurueckblaettern und
+// eine einzige Gesamt-Abgabe am Schluss - im Gegensatz zum Uebungsmodus, der pro Aufgabe sofort
+// auswertet und Feedback zeigt.
+function isPruefungMode(mode) {
+  return mode === "pruefung_jahr" || mode === "pruefung_kategorie";
+}
 
 // ---------- Level-System (10 Sterne pro Level, 100 Level = 1000 Sterne) ----------
 // Ein eigener Titel pro Level (Index 0 = Level 1, Index 99 = Level 100).
@@ -1206,9 +1235,17 @@ function startTaskFlow(queue) {
   state.queue = queue;
   state.currentIndex = 0;
   state.results = [];
+  state.answers = queue.map(() => ({
+    image: null,
+    hasInk: false,
+    hintsUsed: false,
+    nextHintIndex: 0,
+    hintsExhausted: false,
+    revealedHints: [],
+  }));
   state.starsBeforeRun = currentTotalStars;
   showScreen("screen-task");
-  if (state.mode === "pruefung_jahr" || state.mode === "pruefung_kategorie") {
+  if (isPruefungMode(state.mode)) {
     startExamTimer();
   } else {
     stopExamTimer();
@@ -1240,31 +1277,56 @@ function loadCurrentTask() {
   document.getElementById("problem-text").innerHTML = "";
   renderProblemStatement(document.getElementById("problem-text"), problem.latex, problem.text);
   renderProblemImages(problem.images);
+
+  const examMode = isPruefungMode(state.mode);
+  const answer = examMode ? state.answers[state.currentIndex] : null;
+
   clearCanvas();
   setTool("pen");
   pendingShape = null;
   shapeAnchor = null;
   document.getElementById("shape-tools").classList.toggle("hidden", problem.category !== "Geometrie");
   resetIosDrawing();
+  if (answer?.image) {
+    restoreCanvasFromImage(answer.image);
+  }
   resultEl.classList.add("hidden");
   statusEl.textContent = "";
-  submitBtn.classList.remove("hidden");
-  nextBtn.classList.add("hidden");
 
-  state.nextHintIndex = 0;
-  state.hintsUsedForCurrent = false;
+  // Uebungsmodus: Abgeben wertet sofort aus. Pruefungsmodus: Navigation + eine Gesamt-Abgabe
+  // am Schluss, kein sofortiges Feedback pro Aufgabe (wie bei einer echten Pruefung).
+  submitBtn.classList.toggle("hidden", examMode);
+  nextBtn.classList.add("hidden");
+  const examNav = document.getElementById("exam-nav");
+  examNav.classList.toggle("hidden", !examMode);
+  if (examMode) {
+    document.getElementById("exam-prev-btn").disabled = state.currentIndex === 0;
+    document.getElementById("exam-next-btn").disabled = state.currentIndex === state.queue.length - 1;
+  }
+
+  state.nextHintIndex = answer?.nextHintIndex ?? 0;
+  state.hintsUsedForCurrent = answer?.hintsUsed ?? false;
   const hintBtn = document.getElementById("hint-btn");
-  hintBtn.disabled = false;
-  hintBtn.textContent = "💡 Hinweis";
+  // problem.hints wird vom Server nicht mitgeschickt (bleibt geheim) - deshalb den Ausschoepfungs-
+  // Stand explizit merken (siehe hint-btn-Handler), statt ihn hier aus problem.hints herzuleiten.
+  const hintsExhausted = Boolean(answer?.hintsExhausted);
+  hintBtn.disabled = hintsExhausted;
+  hintBtn.textContent = hintsExhausted ? "💡 Keine weiteren Hinweise" : "💡 Hinweis";
   const hintBox = document.getElementById("hint-box");
-  hintBox.textContent = "";
-  hintBox.classList.add("hidden");
+  if (answer?.revealedHints?.length > 0) {
+    hintBox.textContent = answer.revealedHints[answer.revealedHints.length - 1];
+    hintBox.classList.remove("hidden");
+  } else {
+    hintBox.textContent = "";
+    hintBox.classList.add("hidden");
+  }
 
   const bonusBtn = document.getElementById("btn-play-bonus-game");
   bonusBtn.classList.add("hidden");
   bonusBtn.disabled = false;
   bonusBtn.onclick = null;
 }
+
 
 document.getElementById("hint-btn").addEventListener("click", async () => {
   const problem = state.queue[state.currentIndex];
@@ -1289,6 +1351,15 @@ document.getElementById("hint-btn").addEventListener("click", async () => {
   } else {
     hintBtn.disabled = true;
     hintBtn.textContent = "💡 Keine weiteren Hinweise";
+  }
+
+  // Pruefungsmodus: Hinweis-Stand pro Aufgabe merken, damit er beim Zurueckblaettern erhalten bleibt.
+  if (isPruefungMode(state.mode)) {
+    const answer = state.answers[state.currentIndex];
+    answer.hintsUsed = true;
+    answer.nextHintIndex = state.nextHintIndex;
+    answer.hintsExhausted = !data.hasMore;
+    answer.revealedHints.push(hintBox.textContent);
   }
 });
 
@@ -1388,16 +1459,133 @@ nextBtn.addEventListener("click", () => {
   }
 });
 
+// ---------- Pruefungsmodus: freie Navigation + eine Gesamt-Abgabe ----------
+// Ob die aktuelle Aufgabe ueberhaupt bearbeitet wurde (fuer iOS/PencilKit reicht "hasInk" nicht,
+// da dort nicht auf dem HTML-Canvas gezeichnet wird).
+async function hasAnsweredCurrentProblem() {
+  if (isNativeIOS()) return Boolean(iosDrawingDataUrl);
+  return hasInk;
+}
+
+// Sichert die aktuell sichtbare Zeichnung in state.answers, bevor zu einer anderen Aufgabe
+// geblaettert oder die ganze Pruefung abgegeben wird.
+async function captureCurrentAnswerIfExam() {
+  if (!isPruefungMode(state.mode)) return;
+  const answer = state.answers[state.currentIndex];
+  const answered = await hasAnsweredCurrentProblem();
+  answer.hasInk = answered;
+  answer.image = answered ? await captureDrawing() : null;
+}
+
+document.getElementById("exam-prev-btn").addEventListener("click", async () => {
+  await captureCurrentAnswerIfExam();
+  if (state.currentIndex > 0) {
+    state.currentIndex -= 1;
+    loadCurrentTask();
+  }
+});
+
+document.getElementById("exam-next-btn").addEventListener("click", async () => {
+  await captureCurrentAnswerIfExam();
+  if (state.currentIndex < state.queue.length - 1) {
+    state.currentIndex += 1;
+    loadCurrentTask();
+  }
+});
+
+document.getElementById("exam-submit-btn").addEventListener("click", async () => {
+  await captureCurrentAnswerIfExam();
+  const answeredCount = state.answers.filter((a) => a.hasInk).length;
+  const total = state.queue.length;
+  const confirmed = confirm(
+    `Du hast ${answeredCount} von ${total} Aufgaben bearbeitet. ` +
+      "Nach dem Abgeben kannst du nichts mehr aendern. Möchtest du die Prüfung jetzt wirklich abgeben?"
+  );
+  if (!confirmed) return;
+  await gradeAndFinishExam();
+});
+
+// Wertet alle Aufgaben der Pruefung nacheinander aus (unbeantwortete Aufgaben ohne API-Aufruf
+// direkt als 0 Punkte) und zeigt danach dieselbe Zusammenfassung wie der Uebungsmodus.
+async function gradeAndFinishExam() {
+  stopExamTimer();
+  const overlay = document.getElementById("exam-submit-overlay");
+  const statusText = document.getElementById("exam-submit-status");
+  overlay.classList.remove("hidden");
+  state.results = [];
+
+  for (let i = 0; i < state.queue.length; i++) {
+    const problem = state.queue[i];
+    const answer = state.answers[i];
+    statusText.textContent = `Werte Aufgabe ${i + 1} von ${state.queue.length} aus ...`;
+
+    if (!answer.hasInk || !answer.image) {
+      state.results.push({
+        problemId: problem.id,
+        points: problem.points,
+        awarded: 0,
+        fullyCorrect: false,
+        bonusStars: 0,
+        problemText: problem.text || "",
+        problemLatex: problem.latex || "",
+        transcription: "",
+        resultLatex: undefined,
+        feedback: "Keine Antwort abgegeben.",
+        image: undefined,
+      });
+      continue;
+    }
+
+    const { ok, data } = await api("/api/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ problemId: problem.id, image: answer.image, hintsUsed: answer.hintsUsed }),
+    });
+    if (!ok) {
+      state.results.push({
+        problemId: problem.id,
+        points: problem.points,
+        awarded: 0,
+        fullyCorrect: false,
+        bonusStars: 0,
+        problemText: problem.text || "",
+        problemLatex: problem.latex || "",
+        transcription: "",
+        resultLatex: undefined,
+        feedback: `Auswertung fehlgeschlagen: ${data.error || "unbekannter Fehler"}.`,
+        image: answer.image,
+      });
+      continue;
+    }
+    state.results.push({
+      problemId: problem.id,
+      points: data.points,
+      awarded: data.awarded,
+      fullyCorrect: Boolean(data.correct),
+      bonusStars: 0,
+      problemText: problem.text || "",
+      problemLatex: problem.latex || "",
+      transcription: data.transcription || "",
+      resultLatex: data.latex || "",
+      feedback: data.feedback || "",
+      image: answer.image,
+    });
+  }
+
+  overlay.classList.add("hidden");
+  await finishRun();
+}
+
 async function finishRun() {
   stopExamTimer();
-  const isExamMode = state.mode === "pruefung_jahr" || state.mode === "pruefung_kategorie";
+  const examMode = isPruefungMode(state.mode);
   const totalPoints = state.results.reduce((sum, r) => sum + r.points, 0);
   const awardedPoints = state.results.reduce((sum, r) => sum + r.awarded, 0);
   const fullyCorrectCount = state.results.filter((r) => r.fullyCorrect).length;
   const percent = totalPoints > 0 ? Math.round((awardedPoints / totalPoints) * 1000) / 10 : 0;
   // Sterne gibt es nur im Uebungsmodus (3 pro vollstaendig richtiger Aufgabe, plus 1 Bonus-Stern
   // je gewonnenem Merkspiel) - im Pruefungsmodus zaehlen stattdessen Prozent/Note, keine Sterne.
-  const starsEarned = isExamMode
+  const starsEarned = examMode
     ? 0
     : state.results.reduce((sum, r) => sum + (r.fullyCorrect ? 3 : 0) + (r.bonusStars || 0), 0);
 
@@ -1417,7 +1605,7 @@ async function finishRun() {
 
   const gradeEl = document.getElementById("summary-grade");
   const grade = computeGrade(awardedPoints, totalPoints);
-  if (isExamMode && grade !== null) {
+  if (examMode && grade !== null) {
     gradeEl.textContent = `${percent}% – Note: ${grade.toFixed(2)}`;
     gradeEl.classList.remove("hidden");
   } else {
@@ -1425,7 +1613,7 @@ async function finishRun() {
   }
 
   const starsEl = document.getElementById("summary-stars");
-  if (isExamMode) {
+  if (examMode) {
     starsEl.classList.add("hidden");
   } else {
     starsEl.textContent = starsEarned > 0 ? "⭐".repeat(starsEarned) : "–";
@@ -1462,7 +1650,7 @@ async function goToHistory() {
   const modeLabels = { uebung: "Übung", pruefung_jahr: "Prüfung (Jahr)", pruefung_kategorie: "Prüfung (Kategorie)" };
   const rows = data
     .map((r, i) => {
-      const isExamRow = r.mode === "pruefung_jahr" || r.mode === "pruefung_kategorie";
+      const isExamRow = isPruefungMode(r.mode);
       const grade = computeGrade(r.awarded_points, r.total_points);
       return `<tr>
         <td>${new Date(r.created_at).toLocaleString("de-CH")}</td>

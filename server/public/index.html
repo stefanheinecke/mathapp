@@ -124,6 +124,12 @@
           <button id="submit-btn">Abgeben</button>
           <button id="hint-btn" class="hint-btn" title="Hinweis anzeigen (kostet die Punkte dieser Aufgabe)">💡 Hinweis</button>
         </div>
+        <!-- Nur im Pruefungsmodus sichtbar: freies Vor-/Zurueckblaettern statt Abgeben pro Aufgabe -->
+        <div id="exam-nav" class="toolbar hidden">
+          <button id="exam-prev-btn">◀ Zurück</button>
+          <button id="exam-next-btn">Weiter ▶</button>
+          <button id="exam-submit-btn" class="exam-submit-btn">✅ Prüfung abgeben</button>
+        </div>
         <!-- Nur bei Geometrie-Aufgaben sichtbar: Linie/Rechteck/Dreieck mit fest definierten Massen -->
         <div id="shape-tools" class="toolbar hidden">
           <button id="tool-line" class="tool-btn" title="Gerade Linie mit fester Länge einfügen">📏 Linie</button>
@@ -245,6 +251,14 @@
         <button id="shape-dialog-confirm">Einfügen</button>
         <button id="shape-dialog-cancel" class="btn-secondary">Abbrechen</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Wird waehrend der Gesamt-Auswertung einer abgegebenen Pruefung angezeigt -->
+  <div id="exam-submit-overlay" class="level-up-overlay hidden">
+    <div class="level-up-card">
+      <h2>📝 Prüfung wird ausgewertet</h2>
+      <p id="exam-submit-status">Werte aus ...</p>
     </div>
   </div>
 
