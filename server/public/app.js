@@ -1164,6 +1164,7 @@ async function goToUebung() {
 
 document.getElementById("nav-start").addEventListener("click", goToStart);
 document.getElementById("nav-uebung").addEventListener("click", goToUebung);
+document.getElementById("card-uebung").addEventListener("click", goToUebung);
 
 document.getElementById("uebung-year").addEventListener("change", loadUebungProblems);
 document.getElementById("uebung-category").addEventListener("change", loadUebungProblems);
@@ -1206,6 +1207,7 @@ async function goToPruefungSetup() {
 }
 
 document.getElementById("nav-pruefung").addEventListener("click", goToPruefungSetup);
+document.getElementById("card-pruefung").addEventListener("click", goToPruefungSetup);
 
 document.getElementById("btn-pruefung-jahr").addEventListener("click", () => selectPruefungVariant("jahr"));
 document.getElementById("btn-pruefung-kategorie").addEventListener("click", () => selectPruefungVariant("kategorie"));
@@ -1748,6 +1750,7 @@ function renderHistoryProblemCard(d) {
 }
 
 document.getElementById("nav-history").addEventListener("click", goToHistory);
+document.getElementById("card-history").addEventListener("click", goToHistory);
 
 // ---------- Login / Logout ----------
 function showLoginScreen() {

@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mathe-Uebung Prototyp</title>
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%234d6bef'/%3E%3Cstop offset='100%25' stop-color='%231a3a8f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='11' fill='url(%23g)'/%3E%3Ctext x='20' y='28' font-size='19' font-weight='700' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3E%E2%88%9Ax%3C/text%3E%3C/svg%3E"
+  />
   <link rel="stylesheet" href="style.css" />
   <link
     rel="stylesheet"
@@ -16,7 +21,19 @@
   <!-- Login-Bildschirm: wird angezeigt, solange kein gueltiges Session-Token vorliegt -->
   <div id="login-screen" class="login-screen">
     <div class="login-card">
-      <h1>Mathe-Übung</h1>
+      <div class="brand">
+        <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
+          <defs>
+            <linearGradient id="loginLogoGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#4d6bef" />
+              <stop offset="100%" stop-color="#1a3a8f" />
+            </linearGradient>
+          </defs>
+          <rect width="40" height="40" rx="11" fill="url(#loginLogoGrad)" />
+          <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
+        </svg>
+        <h1>Mathe-Übung</h1>
+      </div>
       <h2>Anmelden</h2>
       <label for="login-username">Benutzername:</label>
       <input id="login-username" type="text" maxlength="40" autocomplete="username" />
@@ -31,7 +48,19 @@
 
   <div id="app-layout" class="app-layout hidden">
     <nav class="sidebar">
-      <h1>Mathe-Übung</h1>
+      <div class="brand">
+        <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
+          <defs>
+            <linearGradient id="sidebarLogoGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#4d6bef" />
+              <stop offset="100%" stop-color="#1a3a8f" />
+            </linearGradient>
+          </defs>
+          <rect width="40" height="40" rx="11" fill="url(#sidebarLogoGrad)" />
+          <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
+        </svg>
+        <h1>Mathe-Übung</h1>
+      </div>
       <button id="nav-start" class="nav-btn active">🏠 Start</button>
       <button id="nav-uebung" class="nav-btn">📖 Übungsmodus</button>
       <button id="nav-pruefung" class="nav-btn">📝 Prüfungsmodus</button>
@@ -52,8 +81,37 @@
     <main>
     <!-- Startbildschirm -->
     <section id="screen-start" class="screen">
-      <h2>Willkommen!</h2>
-      <p>Wähle links einen Modus, um loszulegen.</p>
+      <div class="hero">
+        <svg class="logo-icon logo-icon-large" viewBox="0 0 40 40" aria-hidden="true">
+          <defs>
+            <linearGradient id="heroLogoGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#4d6bef" />
+              <stop offset="100%" stop-color="#1a3a8f" />
+            </linearGradient>
+          </defs>
+          <rect width="40" height="40" rx="11" fill="url(#heroLogoGrad)" />
+          <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
+        </svg>
+        <h2>Willkommen zurück!</h2>
+        <p class="hero-sub">Wähle einen Modus, um loszulegen.</p>
+      </div>
+      <div class="dashboard-cards">
+        <button id="card-uebung" class="dashboard-card">
+          <span class="dashboard-card-icon">📖</span>
+          <span class="dashboard-card-title">Übungsmodus</span>
+          <span class="dashboard-card-desc">Einzelne Aufgaben in Ruhe üben, mit Hinweisen und sofortigem Feedback.</span>
+        </button>
+        <button id="card-pruefung" class="dashboard-card">
+          <span class="dashboard-card-icon">📝</span>
+          <span class="dashboard-card-title">Prüfungsmodus</span>
+          <span class="dashboard-card-desc">Ganze Prüfung simulieren: 90 Minuten, frei blättern, am Schluss abgeben.</span>
+        </button>
+        <button id="card-history" class="dashboard-card">
+          <span class="dashboard-card-icon">📊</span>
+          <span class="dashboard-card-title">Meine Ergebnisse</span>
+          <span class="dashboard-card-desc">Bisherige Übungen und Prüfungen im Detail ansehen.</span>
+        </button>
+      </div>
     </section>
 
     <!-- Uebungsmodus: Aufgabe nach Jahr/Kategorie auswaehlen -->
