@@ -404,6 +404,42 @@ button {
   color: #666;
 }
 
+/* Impressum/AGB: eigenstaendige Seiten ausserhalb von .app-layout. */
+.legal-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  line-height: 1.6;
+}
+
+.legal-page h2 {
+  margin-top: 2rem;
+  color: var(--ink);
+}
+
+.legal-page .back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: var(--ink-light);
+}
+
+.legal-page .legal-note {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.sidebar-footer-links {
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.sidebar-footer-links a {
+  color: #666;
+}
+
 .hidden {
   display: none !important;
 }
