@@ -15,8 +15,14 @@ import {
   createUser,
   updateUserPassword,
   deleteUser,
+  getSubscriptionStatus,
+  isSubscriptionActive,
+  upsertPendingSubscription,
+  activateSubscription,
+  deactivateSubscription,
 } from "./db.js";
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
+import { createSubscriptionGateway, retrieveTransaction } from "./payrexx.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -129,6 +135,7 @@ async function gradeConstruction(problem, imageDataUrl, hintsUsed) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" })); // Pruefungsmodus speichert pro Aufgabe ein Bild mit - bei vielen Aufgaben summiert sich das.
+app.use(express.urlencoded({ extended: true })); // Payrexx-Webhooks koennen als form-urlencoded ankommen (Merchant-Einstellung "Normal (PHP-Post)").
 app.use(express.static(path.join(__dirname, "public")));
 
 function getBearerToken(req) {
@@ -155,6 +162,24 @@ function requireAdmin(req, res, next) {
     return res.status(403).json({ error: "Nur der Admin darf das." });
   }
   next();
+}
+
+// Uebungsmodus, Pruefungsmodus und Ergebnisse verlangen ein aktives Abo (CHF 1.-/Monat via
+// Payrexx) - der Admin-Account ist davon ausgenommen, damit "Stefan" die App immer verwalten kann.
+async function requireSubscription(req, res, next) {
+  if (req.user?.isAdmin) return next();
+  try {
+    if (!(await isSubscriptionActive(req.user.username))) {
+      return res.status(402).json({
+        error: "Fuer diese Funktion ist ein aktives Abo (CHF 1.-/Monat) erforderlich.",
+        subscriptionRequired: true,
+      });
+    }
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Abo-Status konnte nicht geprueft werden.", details: err?.message });
+  }
 }
 
 const USERNAME_RE = /^[A-Za-z0-9_.-]{3,40}$/;
@@ -259,9 +284,71 @@ app.get("/api/meta", requireAuth, (_req, res) => {
   res.json({ years: listYears(), categories: listCategories() });
 });
 
+// ---------- Abo (Payrexx, CHF 1.-/Monat) ----------
+app.get("/api/subscription/status", requireAuth, async (req, res) => {
+  try {
+    res.json(await getSubscriptionStatus(req.user.username));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Abo-Status konnte nicht geladen werden.", details: err?.message });
+  }
+});
+
+// Erstellt ein neues Payrexx-Gateway und liefert den Checkout-Link, zu dem das Frontend
+// weiterleitet. referenceId ist immer der Benutzername - so kann der Webhook (unten) die
+// Zeile in "subscriptions" ohne Zusatztabelle wiederfinden.
+app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
+  try {
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const gateway = await createSubscriptionGateway({
+      referenceId: req.user.username,
+      successUrl: `${origin}/?subscription=success`,
+      failedUrl: `${origin}/?subscription=failed`,
+      cancelUrl: `${origin}/?subscription=cancelled`,
+    });
+    await upsertPendingSubscription(req.user.username, gateway.id);
+    res.json({ link: gateway.link });
+  } catch (err) {
+    console.error("Payrexx Checkout Fehler:", err);
+    res.status(502).json({ error: "Zahlung konnte nicht gestartet werden.", details: err?.message });
+  }
+});
+
+const PAYREXX_ACTIVE_STATUSES = new Set(["confirmed", "authorized"]);
+const PAYREXX_INACTIVE_STATUSES = new Set(["cancelled", "declined", "error", "chargeback", "refunded", "partially-refunded"]);
+
+// Payrexx ruft diese URL bei jedem Transaktions-Ereignis auf (Konfiguration im Payrexx-Merchant-
+// Backend unter Settings > API, Content-Type "JSON"). Kein requireAuth: Payrexx kennt unser
+// Session-Token nicht - stattdessen wird die Transaktion per API-Key serverseitig neu abgefragt,
+// dem rohen Payload selbst wird nicht vertraut (koennte sonst gefaelscht sein).
+app.post("/api/subscription/webhook", async (req, res) => {
+  try {
+    const transactionId = req.body?.transaction?.id;
+    if (!transactionId) {
+      return res.status(400).json({ error: "Kein Transaction-Objekt im Request." });
+    }
+    const transaction = await retrieveTransaction(transactionId);
+    const username = transaction.referenceId;
+    if (!username) {
+      return res.status(200).json({ ok: true });
+    }
+    if (PAYREXX_ACTIVE_STATUSES.has(transaction.status)) {
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      await activateSubscription(username, periodEnd, transaction.id);
+    } else if (PAYREXX_INACTIVE_STATUSES.has(transaction.status)) {
+      await deactivateSubscription(username, transaction.status);
+    }
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error("Payrexx Webhook Fehler:", err);
+    res.status(500).json({ error: "Webhook Verarbeitung fehlgeschlagen.", details: err?.message });
+  }
+});
+
 // Uebungsmodus: einzelne Aufgabe nach Jahr/Kategorie filtern.
 // Pruefungsmodus: alle Aufgaben eines Jahres bzw. einer Kategorie abrufen (gleicher Endpunkt).
-app.get("/api/problems", requireAuth, (req, res) => {
+app.get("/api/problems", requireAuth, requireSubscription, (req, res) => {
   const { year, category } = req.query;
   const filtered = filterProblems({ year, category });
   res.json(
@@ -279,7 +366,7 @@ app.get("/api/problems", requireAuth, (req, res) => {
 
 // Liefert Hinweise nacheinander (Schritt fuer Schritt), damit nie alle auf einmal im Netzwerk-Tab
 // sichtbar sind. index=0 -> erster Hinweis, index=1 -> zweiter, usw.
-app.get("/api/hint", requireAuth, (req, res) => {
+app.get("/api/hint", requireAuth, requireSubscription, (req, res) => {
   const problem = PROBLEMS.find((p) => p.id === String(req.query.problemId || ""));
   if (!problem) {
     return res.status(404).json({ error: "Unbekannte Aufgabe." });
@@ -294,7 +381,7 @@ app.get("/api/hint", requireAuth, (req, res) => {
 
 // Reine Live-Vorschau waehrend des Schreibens: nur MathPix-OCR, keine Bewertung (kein OpenAI-
 // Aufruf), damit haeufige Aufrufe waehrend des Schreibens moeglichst billig bleiben.
-app.post("/api/ocr-preview", requireAuth, async (req, res) => {
+app.post("/api/ocr-preview", requireAuth, requireSubscription, async (req, res) => {
   try {
     const { image } = req.body || {};
     if (typeof image !== "string" || !image.startsWith("data:image/png;base64,")) {
@@ -308,7 +395,7 @@ app.post("/api/ocr-preview", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/evaluate", requireAuth, async (req, res) => {
+app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => {
   try {
     const { problemId, image, hintsUsed } = req.body || {};
     if (typeof problemId !== "string" || typeof image !== "string") {
@@ -468,7 +555,7 @@ const ALLOWED_MODES = new Set(["uebung", "pruefung_jahr", "pruefung_kategorie"])
 // Speichert das Ergebnis eines Uebungsdurchgangs (1 Aufgabe) oder einer ganzen Pruefung
 // (mehrere Aufgaben nach Jahr/Kategorie). Der Name kommt aus dem Session-Token (req.user), nie
 // aus dem Request-Body - sonst koennte man Ergebnisse im Namen eines anderen Nutzers speichern.
-app.post("/api/results", requireAuth, async (req, res) => {
+app.post("/api/results", requireAuth, requireSubscription, async (req, res) => {
   try {
     const { mode, scope, details } = req.body || {};
     if (!ALLOWED_MODES.has(mode)) {
@@ -515,7 +602,7 @@ app.post("/api/results", requireAuth, async (req, res) => {
 });
 
 // Verlauf/Sterne-Stand des eingeloggten Nutzers.
-app.get("/api/results", requireAuth, async (req, res) => {
+app.get("/api/results", requireAuth, requireSubscription, async (req, res) => {
   try {
     const results = await getResultsForPlayer(req.user.username);
     res.json(results);

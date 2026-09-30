@@ -695,6 +695,7 @@ const state = {
   token: localStorage.getItem("matheapp_token") || "",
   isAdmin: localStorage.getItem("matheapp_isAdmin") === "true",
   meta: { years: [], categories: [] },
+  subscriptionActive: false,
   mode: null, // 'uebung' | 'pruefung_jahr' | 'pruefung_kategorie'
   scope: null, // problemId (uebung) oder Jahr/Kategorie (pruefung)
   queue: [],
@@ -1157,6 +1158,7 @@ async function goToStart() {
 
 async function goToUebung() {
   if (!requireLogin(goToUebung)) return;
+  if (!requireSubscription("nav-uebung")) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-uebung");
   showScreen("screen-uebung-setup");
@@ -1197,6 +1199,7 @@ function selectPruefungVariant(variant) {
 
 async function goToPruefungSetup() {
   if (!requireLogin(goToPruefungSetup)) return;
+  if (!requireSubscription("nav-pruefung")) return;
   if (!confirmLeaveTask()) return;
   pruefungVariant = null;
   document.getElementById("btn-pruefung-jahr").classList.remove("active");
@@ -1647,6 +1650,7 @@ document.getElementById("btn-summary-restart").addEventListener("click", goToSta
 // ---------- Verlauf ----------
 async function goToHistory() {
   if (!requireLogin(goToHistory)) return;
+  if (!requireSubscription("nav-history")) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-history");
   showScreen("screen-history");
@@ -1786,10 +1790,60 @@ function requireLogin(afterLogin) {
   return false;
 }
 
+// Zeigt den Abo-Bildschirm anstelle von Uebung/Pruefung/Ergebnisse, wenn kein aktives Abo
+// besteht (der Admin-Account ist ausgenommen, siehe requireSubscription im Server).
+function requireSubscription(navId) {
+  if (state.isAdmin || state.subscriptionActive) return true;
+  setActiveNav(navId);
+  document.getElementById("subscribe-status").textContent = "";
+  document.getElementById("btn-subscribe").disabled = false;
+  showScreen("screen-subscribe");
+  return false;
+}
+
+async function refreshSubscriptionStatus() {
+  const { ok, data } = await api("/api/subscription/status");
+  state.subscriptionActive = ok && Boolean(data.active);
+}
+
+document.getElementById("btn-subscribe").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-subscribe");
+  const statusEl = document.getElementById("subscribe-status");
+  btn.disabled = true;
+  statusEl.textContent = "Zahlung wird vorbereitet ...";
+  const { ok, data } = await api("/api/subscription/checkout", { method: "POST" });
+  if (!ok) {
+    statusEl.textContent = data.error || "Zahlung konnte nicht gestartet werden.";
+    btn.disabled = false;
+    return;
+  }
+  window.location.href = data.link;
+});
+
+// Nach der Rueckkehr von Payrexx (Redirect-URL enthaelt ?subscription=success|failed|cancelled):
+// der Webhook, der das Abo in Postgres aktiviert, kann ein paar Sekunden hinter dem Redirect
+// zurueckliegen - deshalb den Status kurz pollen statt nur einmal abzufragen.
+async function handlePayrexxRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get("subscription");
+  if (!result) return;
+  window.history.replaceState({}, "", window.location.pathname);
+  if (result !== "success") {
+    await refreshSubscriptionStatus();
+    return;
+  }
+  for (let i = 0; i < 10; i++) {
+    await refreshSubscriptionStatus();
+    if (state.subscriptionActive) break;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+}
+
 function logout() {
   state.token = "";
   state.username = "";
   state.isAdmin = false;
+  state.subscriptionActive = false;
   localStorage.removeItem("matheapp_token");
   localStorage.removeItem("matheapp_username");
   localStorage.removeItem("matheapp_isAdmin");
@@ -1850,6 +1904,7 @@ async function initAppAfterLogin() {
   showApp();
   await loadMeta();
   await refreshStarsTotal();
+  await refreshSubscriptionStatus();
 }
 
 // Beim Laden pruefen, ob ein gespeichertes Token noch gueltig ist (Server-Neustart, geaendertes
@@ -1983,5 +2038,8 @@ document.getElementById("btn-admin-create-user").addEventListener("click", async
 });
 
 // ---------- Initialisierung ----------
-checkExistingSession();
+(async () => {
+  await checkExistingSession();
+  await handlePayrexxRedirect();
+})();
 
