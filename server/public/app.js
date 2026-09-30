@@ -1768,7 +1768,7 @@ function showApp() {
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("app-layout").classList.remove("hidden");
   const isLoggedIn = Boolean(state.token && state.username);
-  document.getElementById("hero-title").textContent = isLoggedIn ? "Willkommen zurück!" : "Willkommen!";
+  document.getElementById("hero-title").textContent = isLoggedIn ? "Willkommen zurück!" : "Willkommen bei MathQuiz!";
   document.getElementById("hero-sub").textContent = isLoggedIn
     ? "Wähle einen Modus, um loszulegen."
     : "Melde dich an, um zu üben und deine Ergebnisse anzusehen.";
