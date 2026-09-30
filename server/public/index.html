@@ -18,8 +18,8 @@
   />
 </head>
 <body>
-  <!-- Login-Bildschirm: wird angezeigt, solange kein gueltiges Session-Token vorliegt -->
-  <div id="login-screen" class="login-screen">
+  <!-- Login-Bildschirm: wird nur nach Klick auf Anmelden oder einen geschuetzten Bereich gezeigt. -->
+  <div id="login-screen" class="login-screen hidden">
     <div class="login-card">
       <div class="brand">
         <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
@@ -28,7 +28,7 @@
               <stop offset="0%" stop-color="#4d6bef" />
               <stop offset="100%" stop-color="#1a3a8f" />
             </linearGradient>
-          </defs>
+          <!-- </defs> -->
           <rect width="40" height="40" rx="11" fill="url(#loginLogoGrad)" />
           <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
         </svg>
@@ -42,11 +42,12 @@
       <p id="login-error" class="login-error hidden"></p>
       <div class="toolbar">
         <button id="btn-login">Anmelden</button>
+        <button id="btn-login-cancel" type="button">Zurück</button>
       </div>
     </div>
   </div>
 
-  <div id="app-layout" class="app-layout hidden">
+  <div id="app-layout" class="app-layout">
     <nav class="sidebar">
       <div class="brand">
         <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
@@ -75,7 +76,8 @@
         <p id="level-next" class="level-next"></p>
       </div>
       <p id="logged-in-as" class="logged-in-as"></p>
-      <button id="btn-logout" class="nav-btn">🚪 Abmelden</button>
+      <button id="btn-login-open" class="nav-btn">🔐 Anmelden</button>
+      <button id="btn-logout" class="nav-btn hidden">🚪 Abmelden</button>
     </nav>
 
     <main>
@@ -92,8 +94,8 @@
           <rect width="40" height="40" rx="11" fill="url(#heroLogoGrad)" />
           <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
         </svg>
-        <h2>Willkommen zurück!</h2>
-        <p class="hero-sub">Wähle einen Modus, um loszulegen.</p>
+        <h2 id="hero-title">Willkommen!</h2>
+        <p id="hero-sub" class="hero-sub">Melde dich an, um zu üben und deine Ergebnisse anzusehen.</p>
       </div>
       <div class="dashboard-cards">
         <button id="card-uebung" class="dashboard-card">

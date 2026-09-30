@@ -1156,6 +1156,7 @@ async function goToStart() {
 }
 
 async function goToUebung() {
+  if (!requireLogin(goToUebung)) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-uebung");
   showScreen("screen-uebung-setup");
@@ -1195,6 +1196,7 @@ function selectPruefungVariant(variant) {
 }
 
 async function goToPruefungSetup() {
+  if (!requireLogin(goToPruefungSetup)) return;
   if (!confirmLeaveTask()) return;
   pruefungVariant = null;
   document.getElementById("btn-pruefung-jahr").classList.remove("active");
@@ -1644,6 +1646,7 @@ document.getElementById("btn-summary-restart").addEventListener("click", goToSta
 
 // ---------- Verlauf ----------
 async function goToHistory() {
+  if (!requireLogin(goToHistory)) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-history");
   showScreen("screen-history");
@@ -1753,16 +1756,34 @@ document.getElementById("nav-history").addEventListener("click", goToHistory);
 document.getElementById("card-history").addEventListener("click", goToHistory);
 
 // ---------- Login / Logout ----------
+let pendingAfterLogin = null;
+
 function showLoginScreen() {
   document.getElementById("login-screen").classList.remove("hidden");
   document.getElementById("app-layout").classList.add("hidden");
+  document.getElementById("login-username").focus();
 }
 
 function showApp() {
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("app-layout").classList.remove("hidden");
-  document.getElementById("logged-in-as").textContent = `Angemeldet als: ${state.username}`;
+  const isLoggedIn = Boolean(state.token && state.username);
+  document.getElementById("hero-title").textContent = isLoggedIn ? "Willkommen zurück!" : "Willkommen!";
+  document.getElementById("hero-sub").textContent = isLoggedIn
+    ? "Wähle einen Modus, um loszulegen."
+    : "Melde dich an, um zu üben und deine Ergebnisse anzusehen.";
+  document.getElementById("logged-in-as").textContent = isLoggedIn ? `Angemeldet als: ${state.username}` : "";
+  document.getElementById("logged-in-as").classList.toggle("hidden", !isLoggedIn);
+  document.getElementById("btn-login-open").classList.toggle("hidden", isLoggedIn);
+  document.getElementById("btn-logout").classList.toggle("hidden", !isLoggedIn);
   document.getElementById("nav-admin").classList.toggle("hidden", !state.isAdmin);
+}
+
+function requireLogin(afterLogin) {
+  if (state.token && state.username) return true;
+  pendingAfterLogin = afterLogin;
+  showLoginScreen();
+  return false;
 }
 
 function logout() {
@@ -1772,10 +1793,20 @@ function logout() {
   localStorage.removeItem("matheapp_token");
   localStorage.removeItem("matheapp_username");
   localStorage.removeItem("matheapp_isAdmin");
-  showLoginScreen();
+  pendingAfterLogin = null;
+  showApp();
+  setActiveNav("nav-start");
+  showScreen("screen-start");
 }
 
 document.getElementById("btn-logout").addEventListener("click", logout);
+document.getElementById("btn-login-open").addEventListener("click", () => showLoginScreen());
+document.getElementById("btn-login-cancel").addEventListener("click", () => {
+  pendingAfterLogin = null;
+  showApp();
+  setActiveNav("nav-start");
+  showScreen("screen-start");
+});
 
 document.getElementById("btn-login").addEventListener("click", async () => {
   const username = document.getElementById("login-username").value.trim();
@@ -1805,6 +1836,9 @@ document.getElementById("btn-login").addEventListener("click", async () => {
   localStorage.setItem("matheapp_isAdmin", String(state.isAdmin));
   document.getElementById("login-password").value = "";
   await initAppAfterLogin();
+  const afterLogin = pendingAfterLogin;
+  pendingAfterLogin = null;
+  if (afterLogin) await afterLogin();
 });
 
 // Enter-Taste im Passwortfeld loest den Login aus (bessere UX als nur Klick auf den Button).
@@ -1822,7 +1856,9 @@ async function initAppAfterLogin() {
 // SESSION_SECRET oder Ablauf wuerden es ungueltig machen) - sonst direkt zum Login-Bildschirm.
 async function checkExistingSession() {
   if (!state.token) {
-    showLoginScreen();
+    showApp();
+    setActiveNav("nav-start");
+    showScreen("screen-start");
     return;
   }
   const { ok, data } = await api("/api/auth/me");
@@ -1916,6 +1952,7 @@ async function renderAdminUsers() {
 }
 
 async function goToAdmin() {
+  if (!requireLogin(goToAdmin)) return;
   if (!state.isAdmin) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-admin");
