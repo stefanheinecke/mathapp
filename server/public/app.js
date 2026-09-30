@@ -1780,6 +1780,7 @@ function showApp() {
 }
 
 function requireLogin(afterLogin) {
+  if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Payrexx-Pruefung)
   if (state.token && state.username) return true;
   pendingAfterLogin = afterLogin;
   showLoginScreen();

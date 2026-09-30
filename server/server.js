@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import { checkSteps } from "./mathCheck.js";
@@ -129,6 +130,24 @@ async function gradeConstruction(problem, imageDataUrl, hintsUsed) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" })); // Pruefungsmodus speichert pro Aufgabe ein Bild mit - bei vielen Aufgaben summiert sich das.
+
+// TEMPORAER fuer die Payrexx-Kontovalidierung: Payrexx muss die Webseite ohne Login pruefen
+// koennen. Mit AUTH_BYPASS=true in .env wird jede Anfrage automatisch als eingeloggt behandelt
+// und der Login-Bildschirm im Frontend uebersprungen. WIEDER ENTFERNEN (AUTH_BYPASS aus .env
+// loeschen/auf false setzen), sobald Payrexx die Pruefung abgeschlossen hat!
+const AUTH_BYPASS = process.env.AUTH_BYPASS === "true";
+if (AUTH_BYPASS) {
+  console.warn("WARNUNG: AUTH_BYPASS ist aktiv - Login ist fuer alle Nutzer deaktiviert (nur fuer die Payrexx-Pruefung)!");
+}
+
+// index.html normalerweise ueber express.static ausliefern, ausser im AUTH_BYPASS-Modus: dort
+// wird window.AUTH_BYPASS injiziert, damit app.js den Login-Bildschirm ueberspringt.
+app.get("/", (_req, res) => {
+  if (!AUTH_BYPASS) return res.sendFile(path.join(__dirname, "public", "index.html"));
+  const html = readFileSync(path.join(__dirname, "public", "index.html"), "utf8");
+  res.type("html").send(html.replace("<body>", "<body>\n  <script>window.AUTH_BYPASS = true;</script>"));
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 function getBearerToken(req) {
@@ -141,6 +160,10 @@ function getBearerToken(req) {
 // dann {username, isAdmin} - die Server-seitige Wahrheit ueber "wer bin ich", nie ein
 // client-gelieferter Name (verhindert, dass sich jemand als anderer Nutzer ausgibt).
 function requireAuth(req, res, next) {
+  if (AUTH_BYPASS) {
+    req.user = { username: "payrexx-review", isAdmin: false };
+    return next();
+  }
   const payload = verifyToken(getBearerToken(req));
   if (!payload) {
     return res.status(401).json({ error: "Bitte zuerst anmelden." });
