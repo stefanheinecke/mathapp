@@ -1164,6 +1164,15 @@ button {
   font-size: 1rem;
 }
 
+.mockup-line-prompt {
+  width: 100%;
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 .mockup-line-short {
   width: 45%;
 }
