@@ -24,6 +24,7 @@ import {
 } from "./db.js";
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
 import { createSubscriptionGateway, retrieveTransaction, retrieveSubscription } from "./payrexx.js";
+import { isTrialActive, getTrialEndsAt } from "./trial.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -189,17 +190,20 @@ function requireAdmin(req, res, next) {
 }
 
 // Uebungsmodus, Pruefungsmodus und Ergebnisse verlangen ein aktives Abo (CHF 1.-/Monat via
-// Payrexx) - der Admin-Account ist davon ausgenommen, damit "Stefan" die App immer verwalten kann.
+// Payrexx) ODER eine noch laufende 3-taegige Testphase ab Kontoerstellung - der Admin-Account
+// ist davon ausgenommen, damit "Stefan" die App immer verwalten kann. Im AUTH_BYPASS-Modus
+// (Payrexx-Kontovalidierung) ebenfalls ausgenommen, sonst saehe der Pruefer trotz Bypass eine
+// Abo-Sperre.
 async function requireSubscription(req, res, next) {
-  if (req.user?.isAdmin) return next();
+  if (AUTH_BYPASS || req.user?.isAdmin) return next();
   try {
-    if (!(await isSubscriptionActive(req.user.username))) {
-      return res.status(402).json({
-        error: "Fuer diese Funktion ist ein aktives Abo (CHF 1.-/Monat) erforderlich.",
-        subscriptionRequired: true,
-      });
-    }
-    next();
+    if (await isSubscriptionActive(req.user.username)) return next();
+    const user = await findUserByUsername(req.user.username);
+    if (user && isTrialActive(user.created_at)) return next();
+    return res.status(402).json({
+      error: "Fuer diese Funktion ist ein aktives Abo (CHF 1.-/Monat) erforderlich.",
+      subscriptionRequired: true,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Abo-Status konnte nicht geprueft werden.", details: err?.message });
@@ -309,9 +313,21 @@ app.get("/api/meta", requireAuth, (_req, res) => {
 });
 
 // ---------- Abo (Payrexx, CHF 1.-/Monat) ----------
+// "active" beruecksichtigt sowohl ein bezahltes Abo als auch die 3-taegige Testphase ab
+// Kontoerstellung - das Frontend muss dadurch nicht zwischen beidem unterscheiden, um die
+// Navigation freizuschalten; trialEndsAt/trialActive dienen nur der Anzeige im Trial-Banner.
 app.get("/api/subscription/status", requireAuth, async (req, res) => {
   try {
-    res.json(await getSubscriptionStatus(req.user.username));
+    const subscription = await getSubscriptionStatus(req.user.username);
+    const user = await findUserByUsername(req.user.username);
+    const trialActive = Boolean(user && isTrialActive(user.created_at));
+    res.json({
+      ...subscription,
+      subscriptionActive: subscription.active,
+      active: subscription.active || trialActive,
+      trialActive,
+      trialEndsAt: user ? getTrialEndsAt(user.created_at) : null,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Abo-Status konnte nicht geladen werden.", details: err?.message });

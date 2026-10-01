@@ -7,7 +7,7 @@
   <link
     rel="icon"
     type="image/svg+xml"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%234d6bef'/%3E%3Cstop offset='100%25' stop-color='%231a3a8f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='11' fill='url(%23g)'/%3E%3Ctext x='20' y='28' font-size='19' font-weight='700' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3E%E2%88%9Ax%3C/text%3E%3C/svg%3E"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2388C9FA'/%3E%3Cstop offset='100%25' stop-color='%232B18A3'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='11' fill='url(%23g)'/%3E%3Ctext x='20' y='28' font-size='19' font-weight='700' fill='white' text-anchor='middle' font-family='system-ui,sans-serif'%3E%E2%88%9Ax%3C/text%3E%3C/svg%3E"
   />
   <link rel="stylesheet" href="style.css" />
   <link
@@ -25,8 +25,8 @@
         <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
           <defs>
             <linearGradient id="loginLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#4d6bef" />
-              <stop offset="100%" stop-color="#1a3a8f" />
+              <stop offset="0%" stop-color="#88c9fa" />
+              <stop offset="100%" stop-color="#2b18a3" />
             </linearGradient>
           <!-- </defs> -->
           <rect width="40" height="40" rx="11" fill="url(#loginLogoGrad)" />
@@ -53,8 +53,8 @@
         <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
           <defs>
             <linearGradient id="sidebarLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#4d6bef" />
-              <stop offset="100%" stop-color="#1a3a8f" />
+              <stop offset="0%" stop-color="#88c9fa" />
+              <stop offset="100%" stop-color="#2b18a3" />
             </linearGradient>
           </defs>
           <rect width="40" height="40" rx="11" fill="url(#sidebarLogoGrad)" />
@@ -63,11 +63,13 @@
         <h1>MathQuiz</h1>
       </div>
       <button id="nav-start" class="nav-btn active">🏠 Start</button>
+      <button id="nav-pricing" class="nav-btn">💳 Preise</button>
       <button id="nav-uebung" class="nav-btn">📖 Übungsmodus</button>
       <button id="nav-pruefung" class="nav-btn">📝 Prüfungsmodus</button>
       <button id="nav-history" class="nav-btn">📊 Meine Ergebnisse</button>
       <button id="nav-admin" class="nav-btn hidden">🔑 Admin</button>
       <p id="stars-total" class="stars-total hidden"></p>
+      <p id="trial-banner" class="trial-banner hidden"></p>
       <div id="level-info" class="level-info hidden">
         <p id="level-title" class="level-title"></p>
         <div class="level-progress-track">
@@ -91,8 +93,8 @@
         <svg class="logo-icon logo-icon-large" viewBox="0 0 40 40" aria-hidden="true">
           <defs>
             <linearGradient id="heroLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#4d6bef" />
-              <stop offset="100%" stop-color="#1a3a8f" />
+              <stop offset="0%" stop-color="#88c9fa" />
+              <stop offset="100%" stop-color="#2b18a3" />
             </linearGradient>
           </defs>
           <rect width="40" height="40" rx="11" fill="url(#heroLogoGrad)" />
@@ -128,6 +130,33 @@
         <button id="btn-subscribe">Jetzt abonnieren (CHF 1.-/Monat)</button>
       </div>
       <p id="subscribe-status" class="status"></p>
+    </section>
+
+    <!-- Preise: oeffentlich einsehbar, kein Login noetig -->
+    <section id="screen-pricing" class="screen hidden">
+      <h2>Preise</h2>
+      <p>Starte kostenlos und wechsle jederzeit zum Abo – ohne Mindestlaufzeit.</p>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <span class="pricing-plan-name">Kostenlos testen</span>
+          <span class="pricing-price">CHF 0.- <span>/ 3 Tage</span></span>
+          <ul class="pricing-features">
+            <li>Übungsmodus, Prüfungsmodus und Ergebnisse</li>
+            <li>KI-Bewertung deiner handschriftlichen Lösungen</li>
+            <li>Keine Zahlungsangaben nötig</li>
+          </ul>
+        </div>
+        <div class="pricing-card featured">
+          <span class="pricing-plan-name">MathQuiz Abo</span>
+          <span class="pricing-price">CHF 1.- <span>/ Monat</span></span>
+          <ul class="pricing-features">
+            <li>Alles aus der Testphase</li>
+            <li>Monatlich kündbar</li>
+            <li>Bezahlung sicher über Payrexx</li>
+          </ul>
+          <button id="btn-pricing-subscribe" class="pricing-cta">Jetzt starten</button>
+        </div>
+      </div>
     </section>
 
     <!-- Uebungsmodus: Aufgabe nach Jahr/Kategorie auswaehlen -->

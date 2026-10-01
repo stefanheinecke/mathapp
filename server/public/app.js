@@ -1163,6 +1163,15 @@ async function goToStart() {
   await refreshStarsTotal();
 }
 
+// Preise sind oeffentlich einsehbar, kein Login noetig (wie der Startbildschirm).
+async function goToPricing() {
+  if (!confirmLeaveTask()) return;
+  setActiveNav("nav-pricing");
+  showScreen("screen-pricing");
+}
+
+document.getElementById("nav-pricing").addEventListener("click", goToPricing);
+
 async function goToUebung() {
   if (!requireLogin(goToUebung)) return;
   if (!requireSubscription("nav-uebung")) return;
@@ -1799,8 +1808,10 @@ function requireLogin(afterLogin) {
 }
 
 // Zeigt den Abo-Bildschirm anstelle von Uebung/Pruefung/Ergebnisse, wenn kein aktives Abo
-// besteht (der Admin-Account ist ausgenommen, siehe requireSubscription im Server).
+// (oder laufende Testphase) besteht (der Admin-Account ist ausgenommen, siehe requireSubscription
+// im Server).
 function requireSubscription(navId) {
+  if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Payrexx-Pruefung)
   if (state.isAdmin || state.subscriptionActive) return true;
   setActiveNav(navId);
   document.getElementById("subscribe-status").textContent = "";
@@ -1812,20 +1823,46 @@ function requireSubscription(navId) {
 async function refreshSubscriptionStatus() {
   const { ok, data } = await api("/api/subscription/status");
   state.subscriptionActive = ok && Boolean(data.active);
+  renderTrialBanner(ok ? data : null);
 }
 
-document.getElementById("btn-subscribe").addEventListener("click", async () => {
-  const btn = document.getElementById("btn-subscribe");
-  const statusEl = document.getElementById("subscribe-status");
+// Zeigt in der Sidebar an, wie viele Tage der kostenlosen Testphase noch uebrig sind - nur
+// relevant, solange noch keine echte Zahlung erfolgt ist.
+function renderTrialBanner(data) {
+  const banner = document.getElementById("trial-banner");
+  if (state.isAdmin || !data?.trialActive || data.subscriptionActive) {
+    banner.classList.add("hidden");
+    return;
+  }
+  const daysLeft = Math.max(0, Math.ceil((new Date(data.trialEndsAt) - Date.now()) / (24 * 60 * 60 * 1000)));
+  banner.textContent = `⏳ Noch ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tage"} kostenlos testen`;
+  banner.classList.remove("hidden");
+}
+
+
+// Erstellt ein Payrexx-Checkout und leitet dorthin weiter - gemeinsam genutzt vom Abo-Pflicht-
+// Bildschirm (Uebung/Pruefung/Ergebnisse ohne Abo) und vom "Jetzt starten"-Knopf auf der
+// Preise-Seite.
+async function startSubscriptionCheckout(btn, statusEl) {
   btn.disabled = true;
-  statusEl.textContent = "Zahlung wird vorbereitet ...";
+  if (statusEl) statusEl.textContent = "Zahlung wird vorbereitet ...";
   const { ok, data } = await api("/api/subscription/checkout", { method: "POST" });
   if (!ok) {
-    statusEl.textContent = data.error || "Zahlung konnte nicht gestartet werden.";
+    if (statusEl) statusEl.textContent = data.error || "Zahlung konnte nicht gestartet werden.";
+    else alert(data.error || "Zahlung konnte nicht gestartet werden.");
     btn.disabled = false;
     return;
   }
   window.location.href = data.link;
+}
+
+document.getElementById("btn-subscribe").addEventListener("click", () => {
+  startSubscriptionCheckout(document.getElementById("btn-subscribe"), document.getElementById("subscribe-status"));
+});
+
+document.getElementById("btn-pricing-subscribe").addEventListener("click", () => {
+  if (!requireLogin(() => startSubscriptionCheckout(document.getElementById("btn-pricing-subscribe")))) return;
+  startSubscriptionCheckout(document.getElementById("btn-pricing-subscribe"));
 });
 
 // Nach der Rueckkehr von Payrexx (Redirect-URL enthaelt ?subscription=success|failed|cancelled):
@@ -1856,6 +1893,7 @@ function logout() {
   localStorage.removeItem("matheapp_username");
   localStorage.removeItem("matheapp_isAdmin");
   pendingAfterLogin = null;
+  document.getElementById("trial-banner").classList.add("hidden");
   showApp();
   setActiveNav("nav-start");
   showScreen("screen-start");
