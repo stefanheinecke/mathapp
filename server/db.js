@@ -54,6 +54,19 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+
+  // Ein Abo pro Nutzer (CHF 1.-/Monat via Payrexx). referenceId der Payrexx-Zahlung ist immer der
+  // Benutzername, dadurch kann der Webhook die Zeile direkt finden, ohne eine zusaetzliche Tabelle.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      username TEXT PRIMARY KEY REFERENCES users(username) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'inactive',
+      payrexx_gateway_id TEXT,
+      current_period_end TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
   await ensureAdminUser();
 }
 
@@ -144,3 +157,54 @@ export async function getResultsForPlayer(playerName) {
   );
   return rows;
 }
+
+// ---------- Abo (Payrexx, CHF 1.-/Monat) ----------
+
+// Liefert den Abo-Status fuers Frontend (aktiv nur, wenn Status "active" UND die aktuelle
+// Periode noch nicht abgelaufen ist - eine gekuendigte/fehlgeschlagene Verlaengerung faellt sonst
+// erst beim naechsten Webhook auf, nicht sofort am Ende der bezahlten Periode).
+export async function getSubscriptionStatus(username) {
+  const { rows } = await pool.query(
+    "SELECT status, current_period_end FROM subscriptions WHERE username = $1",
+    [username]
+  );
+  const row = rows[0];
+  const active = Boolean(row && row.status === "active" && row.current_period_end && new Date(row.current_period_end) > new Date());
+  return { active, status: row?.status || "inactive", currentPeriodEnd: row?.current_period_end || null };
+}
+
+export async function isSubscriptionActive(username) {
+  return (await getSubscriptionStatus(username)).active;
+}
+
+// Wird beim Erzeugen eines neuen Payrexx-Gateways aufgerufen, bevor der Nutzer bezahlt hat.
+export async function upsertPendingSubscription(username, gatewayId) {
+  await pool.query(
+    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, updated_at)
+     VALUES ($1, 'pending', $2, now())
+     ON CONFLICT (username) DO UPDATE SET status = 'pending', payrexx_gateway_id = $2, updated_at = now()`,
+    [username, String(gatewayId)]
+  );
+}
+
+// Wird vom Payrexx-Webhook aufgerufen, sobald eine Zahlung (Erst- oder Verlaengerungszahlung
+// des Abos) bestaetigt wurde.
+export async function activateSubscription(username, currentPeriodEnd, gatewayId) {
+  const { rowCount } = await pool.query(
+    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, current_period_end, updated_at)
+     VALUES ($1, 'active', $2, $3, now())
+     ON CONFLICT (username) DO UPDATE SET status = 'active', payrexx_gateway_id = $2, current_period_end = $3, updated_at = now()`,
+    [username, String(gatewayId), currentPeriodEnd]
+  );
+  return rowCount > 0;
+}
+
+// Wird vom Payrexx-Webhook aufgerufen bei Kuendigung/Fehlschlag/Rueckbuchung einer Zahlung.
+export async function deactivateSubscription(username, status = "inactive") {
+  const { rowCount } = await pool.query(
+    `UPDATE subscriptions SET status = $2, updated_at = now() WHERE username = $1`,
+    [username, status]
+  );
+  return rowCount > 0;
+}
+
