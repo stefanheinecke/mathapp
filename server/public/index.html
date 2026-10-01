@@ -73,6 +73,7 @@
           <button id="nav-uebung" class="nav-btn">Übungsmodus</button>
           <button id="nav-pruefung" class="nav-btn">Prüfungsmodus</button>
           <button id="nav-history" class="nav-btn">Ergebnisse</button>
+          <button id="nav-profile" class="nav-btn hidden">Profil</button>
           <button id="nav-admin" class="nav-btn hidden">Admin</button>
           <div class="nav-links-divider"></div>
           <p id="trial-banner" class="trial-banner hidden"></p>
@@ -128,14 +129,14 @@
         <article class="showcase-row">
           <div class="showcase-text">
             <h2>Übungsmodus</h2>
-            <p>Einzelne Aufgaben nach Jahr oder Kategorie auswählen, mit stufenweisen Hinweisen und sofortigem Feedback zur handschriftlichen Lösung.</p>
+            <p>Einzelne Aufgaben nach Jahr oder Kategorie auswählen, mit Tipps und sofortigem Feedback zur handschriftlichen Lösung.</p>
           </div>
           <div class="mockup-frame">
             <div class="mockup-bar"><span></span><span></span><span></span></div>
             <div class="mockup-body">
               <p class="mockup-line mockup-line-title">3x + 5 = 20</p>
-              <p class="mockup-line mockup-line-short"></p>
-              <p class="mockup-line mockup-line-short"></p>
+              <p class="mockup-line mockup-line-short">...</p>
+              <p class="mockup-line mockup-line-short">x = 5</p>
               <span class="mockup-badge mockup-badge-ok">Richtig ✓</span>
             </div>
           </div>
@@ -144,15 +145,15 @@
         <article class="showcase-row showcase-row-reverse">
           <div class="showcase-text">
             <h2>Prüfungsmodus</h2>
-            <p>Ganze Prüfung mit 90-Minuten-Timer simulieren, frei zwischen Aufgaben blättern und am Schluss gesammelt abgeben.</p>
+            <p>Realistische Prüfung mit 90-Minuten-Timer simulieren, frei zwischen Aufgaben blättern und am Schluss gesammelt abgeben.</p>
           </div>
           <div class="mockup-frame">
             <div class="mockup-bar"><span></span><span></span><span></span></div>
             <div class="mockup-body">
               <span class="mockup-badge mockup-badge-timer">⏱ 72:15</span>
-              <p class="mockup-line mockup-line-short"></p>
-              <p class="mockup-line mockup-line-title">Aufgabe 4 von 10</p>
-              <p class="mockup-line mockup-line-short"></p>
+              <p class="mockup-line mockup-line-title">Aufgabe 4 von 27</p>
+              <p class="mockup-line mockup-line-short">Dividiere die 2.Potenz von 12 durch die 3.Potenz von 2</p>
+              <p class="mockup-line mockup-line-short">...</p>
             </div>
           </div>
         </article>
@@ -346,6 +347,73 @@
       <div class="toolbar">
         <button id="btn-admin-create-user">Benutzer anlegen</button>
       </div>
+    </section>
+
+    <!-- Profil: fuer jeden eingeloggten Nutzer (nicht nur Admin) -->
+    <section id="screen-profile" class="screen hidden">
+      <h2>Mein Profil</h2>
+
+      <div class="profile-grid">
+        <div class="profile-card">
+          <h3>Account</h3>
+          <label for="profile-username">Benutzername</label>
+          <input id="profile-username" type="text" disabled />
+
+          <label for="profile-first-name">Vorname (optional)</label>
+          <input id="profile-first-name" type="text" maxlength="100" autocomplete="given-name" />
+
+          <label for="profile-last-name">Nachname (optional)</label>
+          <input id="profile-last-name" type="text" maxlength="100" autocomplete="family-name" />
+
+          <label for="profile-email">E-Mail (optional)</label>
+          <input id="profile-email" type="email" maxlength="200" autocomplete="email" />
+
+          <p id="profile-save-error" class="login-error hidden"></p>
+          <p id="profile-save-success" class="profile-success hidden"></p>
+          <div class="toolbar">
+            <button id="btn-profile-save">Speichern</button>
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <h3>Passwort ändern</h3>
+          <label for="profile-current-password">Aktuelles Passwort</label>
+          <input id="profile-current-password" type="password" maxlength="200" autocomplete="current-password" />
+
+          <label for="profile-new-password">Neues Passwort</label>
+          <input id="profile-new-password" type="password" maxlength="200" autocomplete="new-password" />
+
+          <label for="profile-new-password-confirm">Neues Passwort bestätigen</label>
+          <input id="profile-new-password-confirm" type="password" maxlength="200" autocomplete="new-password" />
+
+          <p id="profile-password-error" class="login-error hidden"></p>
+          <p id="profile-password-success" class="profile-success hidden"></p>
+          <div class="toolbar">
+            <button id="btn-profile-change-password">Passwort ändern</button>
+          </div>
+        </div>
+
+        <div class="profile-card">
+          <h3>Abo</h3>
+          <p><strong>Plan:</strong> <span id="profile-plan"></span></p>
+          <p><strong>Beginn:</strong> <span id="profile-plan-since"></span></p>
+          <p id="profile-plan-note" class="profile-plan-note"></p>
+          <p><strong>⭐ Gesammelte Sterne:</strong> <span id="profile-stars"></span></p>
+        </div>
+      </div>
+
+      <h3 class="profile-charts-heading">Fortschritt &amp; Auswertung</h3>
+      <div class="profile-charts">
+        <div class="profile-chart-card">
+          <p class="profile-chart-title">Ergebnis (%) über Zeit</p>
+          <svg id="profile-chart-progress" class="profile-chart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="profile-chart-card">
+          <p class="profile-chart-title">Durchschnitt nach Modus</p>
+          <svg id="profile-chart-modes" class="profile-chart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+      <p id="profile-charts-empty" class="status hidden">Noch keine Ergebnisse für eine Auswertung vorhanden.</p>
     </section>
     </main>
 

@@ -112,6 +112,16 @@ body {
   font-size: 0.9rem;
 }
 
+.profile-success {
+  color: #16a34a;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
 .logged-in-as {
   font-size: 0.85rem;
   color: #666;
@@ -1024,6 +1034,63 @@ button {
   margin: 0;
   color: #555;
   line-height: 1.6;
+}
+
+/* ---------- Profil ---------- */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.profile-card {
+  background: #fff;
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+}
+
+.profile-card h3 {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+
+.profile-plan-note {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.profile-charts-heading {
+  margin-top: 2rem;
+}
+
+.profile-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.profile-chart-card {
+  background: #fff;
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--card-shadow);
+}
+
+.profile-chart-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.profile-chart {
+  width: 100%;
+  height: auto;
 }
 
 /* Leichtes CSS-Mockup eines Bildschirmausschnitts (keine echten Screenshots vorhanden). */

@@ -54,6 +54,10 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // Optionale Profilangaben - erst nachtraeglich hinzugefuegt, daher idempotent per ALTER.
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`);
 
   // Ein Abo pro Nutzer (CHF 1.-/Monat via Payrexx). referenceId der Payrexx-Zahlung ist immer der
   // Benutzername, dadurch kann der Webhook die Zeile direkt finden, ohne eine zusaetzliche Tabelle.
@@ -66,6 +70,9 @@ export async function initDb() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // Datum der ersten erfolgreichen Zahlung (bleibt bei Verlaengerungen unveraendert, im
+  // Gegensatz zu current_period_end) - fuers Profil ("Abo seit ...").
+  await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;`);
 
   await ensureAdminUser();
 }
@@ -90,7 +97,7 @@ async function ensureAdminUser() {
 
 export async function findUserByUsername(username) {
   const { rows } = await pool.query(
-    "SELECT id, username, password_hash, is_admin, created_at FROM users WHERE username = $1",
+    "SELECT id, username, password_hash, is_admin, created_at, first_name, last_name, email FROM users WHERE username = $1",
     [username]
   );
   return rows[0] || null;
@@ -117,6 +124,17 @@ export async function updateUserPassword(username, password) {
     username,
   ]);
   return rowCount > 0;
+}
+
+// Optionale Profilangaben (Vorname/Nachname/E-Mail) - jedes Feld kann leer gelassen werden
+// (dann wird NULL gespeichert, nicht ein leerer String).
+export async function updateProfile(username, { firstName, lastName, email }) {
+  const { rows } = await pool.query(
+    `UPDATE users SET first_name = $2, last_name = $3, email = $4 WHERE username = $1
+     RETURNING username, first_name, last_name, email`,
+    [username, firstName || null, lastName || null, email || null]
+  );
+  return rows[0] || null;
 }
 
 export async function deleteUser(username) {
@@ -165,12 +183,17 @@ export async function getResultsForPlayer(playerName) {
 // erst beim naechsten Webhook auf, nicht sofort am Ende der bezahlten Periode).
 export async function getSubscriptionStatus(username) {
   const { rows } = await pool.query(
-    "SELECT status, current_period_end FROM subscriptions WHERE username = $1",
+    "SELECT status, current_period_end, started_at FROM subscriptions WHERE username = $1",
     [username]
   );
   const row = rows[0];
   const active = Boolean(row && row.status === "active" && row.current_period_end && new Date(row.current_period_end) > new Date());
-  return { active, status: row?.status || "inactive", currentPeriodEnd: row?.current_period_end || null };
+  return {
+    active,
+    status: row?.status || "inactive",
+    currentPeriodEnd: row?.current_period_end || null,
+    startedAt: row?.started_at || null,
+  };
 }
 
 export async function isSubscriptionActive(username) {
@@ -191,9 +214,14 @@ export async function upsertPendingSubscription(username, gatewayId) {
 // des Abos) bestaetigt wurde.
 export async function activateSubscription(username, currentPeriodEnd, gatewayId) {
   const { rowCount } = await pool.query(
-    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, current_period_end, updated_at)
-     VALUES ($1, 'active', $2, $3, now())
-     ON CONFLICT (username) DO UPDATE SET status = 'active', payrexx_gateway_id = $2, current_period_end = $3, updated_at = now()`,
+    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, current_period_end, started_at, updated_at)
+     VALUES ($1, 'active', $2, $3, now(), now())
+     ON CONFLICT (username) DO UPDATE SET
+       status = 'active',
+       payrexx_gateway_id = $2,
+       current_period_end = $3,
+       started_at = COALESCE(subscriptions.started_at, now()),
+       updated_at = now()`,
     [username, String(gatewayId), currentPeriodEnd]
   );
   return rowCount > 0;

@@ -15,6 +15,7 @@ import {
   listUsers,
   createUser,
   updateUserPassword,
+  updateProfile,
   deleteUser,
   getSubscriptionStatus,
   isSubscriptionActive,
@@ -240,6 +241,89 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.get("/api/auth/me", requireAuth, (req, res) => {
   res.json({ username: req.user.username, isAdmin: req.user.isAdmin });
+});
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ---------- Profil (eigener Account, kein Admin noetig) ----------
+app.get("/api/profile", requireAuth, async (req, res) => {
+  try {
+    const user = await findUserByUsername(req.user.username);
+    if (!user) return res.status(404).json({ error: "Unbekannter Benutzer." });
+    const subscription = await getSubscriptionStatus(req.user.username);
+    const trialActive = isTrialActive(user.created_at);
+    const results = await getResultsForPlayer(req.user.username);
+    const stars = results.reduce((sum, r) => sum + (r.stars || 0), 0);
+    res.json({
+      username: user.username,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      isAdmin: user.is_admin,
+      createdAt: user.created_at,
+      plan: subscription.active ? "monthly" : "free",
+      subscription: {
+        ...subscription,
+        active: subscription.active || trialActive,
+        trialActive,
+        trialEndsAt: getTrialEndsAt(user.created_at),
+      },
+      stars,
+      results,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Profil konnte nicht geladen werden.", details: err?.message });
+  }
+});
+
+app.put("/api/profile", requireAuth, async (req, res) => {
+  try {
+    const { firstName, lastName, email } = req.body || {};
+    for (const [label, value] of [["Vorname", firstName], ["Nachname", lastName]]) {
+      if (value !== undefined && value !== null && typeof value !== "string") {
+        return res.status(400).json({ error: `${label} muss Text sein.` });
+      }
+      if (typeof value === "string" && value.length > 100) {
+        return res.status(400).json({ error: `${label} darf hoechstens 100 Zeichen lang sein.` });
+      }
+    }
+    if (email !== undefined && email !== null && email !== "" && !EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "E-Mail-Adresse ist ungueltig." });
+    }
+    const updated = await updateProfile(req.user.username, {
+      firstName: firstName?.trim(),
+      lastName: lastName?.trim(),
+      email: email?.trim(),
+    });
+    res.json({ firstName: updated.first_name, lastName: updated.last_name, email: updated.email });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Profil konnte nicht gespeichert werden.", details: err?.message });
+  }
+});
+
+// Eigenes Passwort aendern (im Gegensatz zu /api/admin/users/:username/password verlangt dies
+// das aktuelle Passwort, nicht Admin-Rechte).
+app.put("/api/profile/password", requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+      return res.status(400).json({ error: "Aktuelles und neues Passwort sind erforderlich." });
+    }
+    if (newPassword.length < 6 || newPassword.length > 200) {
+      return res.status(400).json({ error: "Das neue Passwort muss mindestens 6 Zeichen lang sein." });
+    }
+    const user = await findUserByUsername(req.user.username);
+    if (!user || !verifyPassword(currentPassword, user.password_hash)) {
+      return res.status(401).json({ error: "Aktuelles Passwort ist falsch." });
+    }
+    await updateUserPassword(req.user.username, newPassword);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Passwort konnte nicht geaendert werden.", details: err?.message });
+  }
 });
 
 // ---------- Admin: Benutzerverwaltung (nur "Stefan") ----------

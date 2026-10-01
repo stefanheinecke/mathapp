@@ -1683,6 +1683,183 @@ async function finishRun() {
 
 document.getElementById("btn-summary-restart").addEventListener("click", goToStart);
 
+// ---------- Profil ----------
+async function goToProfile() {
+  if (!requireLogin(goToProfile)) return;
+  if (!confirmLeaveTask()) return;
+  setActiveNav("nav-profile");
+  showScreen("screen-profile");
+  await loadProfile();
+}
+
+document.getElementById("nav-profile").addEventListener("click", goToProfile);
+
+const PROFILE_MODE_LABELS = { uebung: "Übung", pruefung_jahr: "Prüfung (Jahr)", pruefung_kategorie: "Prüfung (Kategorie)" };
+
+async function loadProfile() {
+  document.getElementById("profile-save-error").classList.add("hidden");
+  document.getElementById("profile-save-success").classList.add("hidden");
+  document.getElementById("profile-password-error").classList.add("hidden");
+  document.getElementById("profile-password-success").classList.add("hidden");
+
+  const { ok, data } = await api("/api/profile");
+  if (!ok) return;
+
+  document.getElementById("profile-username").value = data.username;
+  document.getElementById("profile-first-name").value = data.firstName || "";
+  document.getElementById("profile-last-name").value = data.lastName || "";
+  document.getElementById("profile-email").value = data.email || "";
+  document.getElementById("profile-stars").textContent = data.stars;
+
+  const planEl = document.getElementById("profile-plan");
+  const sinceEl = document.getElementById("profile-plan-since");
+  const noteEl = document.getElementById("profile-plan-note");
+  const sub = data.subscription;
+  if (sub.status === "active" && sub.currentPeriodEnd && new Date(sub.currentPeriodEnd) > new Date()) {
+    planEl.textContent = "MathQuiz Abo (CHF 1.-/Monat)";
+    sinceEl.textContent = sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("de-CH") : "–";
+    noteEl.textContent = `Nächste Abrechnung: ${new Date(sub.currentPeriodEnd).toLocaleDateString("de-CH")}`;
+  } else if (sub.trialActive) {
+    planEl.textContent = "Kostenlose Testphase";
+    sinceEl.textContent = new Date(data.createdAt).toLocaleDateString("de-CH");
+    noteEl.textContent = `Testphase endet am ${new Date(sub.trialEndsAt).toLocaleDateString("de-CH")}`;
+  } else {
+    planEl.textContent = "Kein aktives Abo";
+    sinceEl.textContent = "–";
+    noteEl.textContent = "";
+  }
+
+  const results = Array.isArray(data.results) ? data.results : [];
+  document.getElementById("profile-charts-empty").classList.toggle("hidden", results.length > 0);
+  renderProfileProgressChart(results);
+  renderProfileModesChart(results);
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+  return el;
+}
+
+// Einfaches Liniendiagramm (kein Chart-Framework noetig): Prozent-Ergebnis je Lauf, chronologisch.
+function renderProfileProgressChart(results) {
+  const svg = document.getElementById("profile-chart-progress");
+  svg.innerHTML = "";
+  const points = [...results].reverse();
+  if (points.length === 0) return;
+  const w = 320;
+  const h = 140;
+  const pad = 20;
+  const maxIndex = points.length - 1 || 1;
+  const coords = points.map((r, i) => {
+    const x = pad + (i / maxIndex) * (w - 2 * pad);
+    const y = h - pad - (Number(r.percent) / 100) * (h - 2 * pad);
+    return [x, y];
+  });
+  svg.appendChild(
+    svgEl("polyline", {
+      points: coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" "),
+      fill: "none",
+      stroke: "#2b18a3",
+      "stroke-width": "2",
+    })
+  );
+  coords.forEach(([x, y]) => {
+    svg.appendChild(svgEl("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: "3", fill: "#f353d5" }));
+  });
+}
+
+// Einfaches Balkendiagramm: Durchschnitts-Prozent pro Modus (Uebung/Pruefung Jahr/Kategorie).
+function renderProfileModesChart(results) {
+  const svg = document.getElementById("profile-chart-modes");
+  svg.innerHTML = "";
+  const groups = {};
+  results.forEach((r) => {
+    (groups[r.mode] ||= []).push(Number(r.percent));
+  });
+  const modes = Object.keys(groups);
+  if (modes.length === 0) return;
+  const w = 320;
+  const h = 140;
+  const pad = 24;
+  const slot = (w - 2 * pad) / modes.length;
+  const barWidth = Math.max(20, slot - 16);
+  modes.forEach((mode, i) => {
+    const values = groups[mode];
+    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const barHeight = (avg / 100) * (h - 2 * pad);
+    const x = pad + i * slot + (slot - barWidth) / 2;
+    const y = h - pad - barHeight;
+    svg.appendChild(svgEl("rect", { x, y, width: barWidth, height: barHeight, rx: 3, fill: "#88c9fa" }));
+    svg.appendChild(
+      svgEl("text", { x: x + barWidth / 2, y: h - 6, "text-anchor": "middle", "font-size": "9", fill: "#555" })
+    ).textContent = PROFILE_MODE_LABELS[mode] || mode;
+    svg.appendChild(
+      svgEl("text", {
+        x: x + barWidth / 2,
+        y: Math.max(10, y - 4),
+        "text-anchor": "middle",
+        "font-size": "10",
+        "font-weight": "700",
+        fill: "#2b18a3",
+      })
+    ).textContent = `${avg.toFixed(0)}%`;
+  });
+}
+
+document.getElementById("btn-profile-save").addEventListener("click", async () => {
+  const errorEl = document.getElementById("profile-save-error");
+  const successEl = document.getElementById("profile-save-success");
+  errorEl.classList.add("hidden");
+  successEl.classList.add("hidden");
+  const { ok, data } = await api("/api/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      firstName: document.getElementById("profile-first-name").value.trim(),
+      lastName: document.getElementById("profile-last-name").value.trim(),
+      email: document.getElementById("profile-email").value.trim(),
+    }),
+  });
+  if (!ok) {
+    errorEl.textContent = data.error || "Profil konnte nicht gespeichert werden.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  successEl.textContent = "Gespeichert.";
+  successEl.classList.remove("hidden");
+});
+
+document.getElementById("btn-profile-change-password").addEventListener("click", async () => {
+  const errorEl = document.getElementById("profile-password-error");
+  const successEl = document.getElementById("profile-password-success");
+  errorEl.classList.add("hidden");
+  successEl.classList.add("hidden");
+  const currentPassword = document.getElementById("profile-current-password").value;
+  const newPassword = document.getElementById("profile-new-password").value;
+  const confirmPassword = document.getElementById("profile-new-password-confirm").value;
+  if (newPassword !== confirmPassword) {
+    errorEl.textContent = "Die neuen Passwörter stimmen nicht überein.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  const { ok, data } = await api("/api/profile/password", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!ok) {
+    errorEl.textContent = data.error || "Passwort konnte nicht geändert werden.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  document.getElementById("profile-current-password").value = "";
+  document.getElementById("profile-new-password").value = "";
+  document.getElementById("profile-new-password-confirm").value = "";
+  successEl.textContent = "Passwort wurde geändert.";
+  successEl.classList.remove("hidden");
+});
+
 // ---------- Verlauf ----------
 async function goToHistory() {
   if (!requireLogin(goToHistory)) return;
@@ -1815,6 +1992,7 @@ function showApp() {
   document.getElementById("logged-in-as").classList.toggle("hidden", !isLoggedIn);
   document.getElementById("btn-login-open").classList.toggle("hidden", isLoggedIn);
   document.getElementById("btn-logout").classList.toggle("hidden", !isLoggedIn);
+  document.getElementById("nav-profile").classList.toggle("hidden", !isLoggedIn);
   document.getElementById("nav-admin").classList.toggle("hidden", !state.isAdmin);
 }
 
