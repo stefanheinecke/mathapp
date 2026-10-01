@@ -1184,6 +1184,35 @@ async function goToUebung() {
 document.getElementById("nav-start").addEventListener("click", goToStart);
 document.getElementById("nav-uebung").addEventListener("click", goToUebung);
 document.getElementById("card-uebung").addEventListener("click", goToUebung);
+document.getElementById("brand-home").addEventListener("click", goToStart);
+document.getElementById("hero-cta-uebung").addEventListener("click", goToUebung);
+document.getElementById("hero-cta-pricing").addEventListener("click", goToPricing);
+
+// ---------- Mobile-Menue (Hamburger) ----------
+const hamburgerBtn = document.getElementById("hamburger");
+const navLinksEl = document.getElementById("nav-links");
+hamburgerBtn.addEventListener("click", () => {
+  const open = navLinksEl.classList.toggle("open");
+  hamburgerBtn.setAttribute("aria-expanded", String(open));
+});
+// Jeder Klick auf einen Nav-Knopf schliesst das mobile Menue wieder (Desktop: keine Wirkung,
+// da .open dort ohnehin nichts veraendert).
+navLinksEl.querySelectorAll(".nav-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    navLinksEl.classList.remove("open");
+    hamburgerBtn.setAttribute("aria-expanded", "false");
+  });
+});
+
+// ---------- Feature-Carousel (Scroll-Snap, Pfeile verschieben um eine Kartenbreite) ----------
+const carouselTrack = document.getElementById("carousel-track");
+function scrollCarousel(direction) {
+  const card = carouselTrack.querySelector(".carousel-card");
+  const step = (card?.offsetWidth || 260) + 16;
+  carouselTrack.scrollBy({ left: direction * step, behavior: "smooth" });
+}
+document.getElementById("carousel-prev").addEventListener("click", () => scrollCarousel(-1));
+document.getElementById("carousel-next").addEventListener("click", () => scrollCarousel(1));
 
 document.getElementById("uebung-year").addEventListener("change", loadUebungProblems);
 document.getElementById("uebung-category").addEventListener("change", loadUebungProblems);
@@ -1788,9 +1817,8 @@ function showApp() {
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("app-layout").classList.remove("hidden");
   const isLoggedIn = Boolean(state.token && state.username);
-  document.getElementById("hero-title").textContent = isLoggedIn ? "Willkommen zurück!" : "Willkommen bei MathQuiz!";
   document.getElementById("hero-sub").textContent = isLoggedIn
-    ? "Wähle einen Modus, um loszulegen."
+    ? "Willkommen zurück! Wähle einen Modus, um loszulegen."
     : "Melde dich an, um zu üben und deine Ergebnisse anzusehen.";
   document.getElementById("logged-in-as").textContent = isLoggedIn ? `Angemeldet als: ${state.username}` : "";
   document.getElementById("logged-in-as").classList.toggle("hidden", !isLoggedIn);

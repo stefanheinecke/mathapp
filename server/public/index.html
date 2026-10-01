@@ -18,21 +18,27 @@
   />
 </head>
 <body>
+  <!-- Logo als wiederverwendbares SVG-Symbol (Palette: #88C9FA -> #2B18A3, Akzent #F353D5). -->
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#88c9fa" />
+        <stop offset="100%" stop-color="#2b18a3" />
+      </linearGradient>
+      <symbol id="logo-mark" viewBox="0 0 40 40">
+        <rect width="40" height="40" rx="12" fill="url(#logoGrad)" />
+        <circle cx="31" cy="10" r="5.5" fill="#f353d5" />
+        <text x="17" y="27" font-size="17" font-weight="800" fill="#fff" text-anchor="middle" font-family="system-ui,sans-serif">√x</text>
+      </symbol>
+    </defs>
+  </svg>
+
   <!-- Login-Bildschirm: wird nur nach Klick auf Anmelden oder einen geschuetzten Bereich gezeigt. -->
   <div id="login-screen" class="login-screen hidden">
     <div class="login-card">
       <div class="brand">
-        <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
-          <defs>
-            <linearGradient id="loginLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#88c9fa" />
-              <stop offset="100%" stop-color="#2b18a3" />
-            </linearGradient>
-          <!-- </defs> -->
-          <rect width="40" height="40" rx="11" fill="url(#loginLogoGrad)" />
-          <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
-        </svg>
-        <h1>MathQuiz</h1>
+        <svg class="logo-icon" aria-hidden="true"><use href="#logo-mark"></use></svg>
+        <span class="brand-name">Math<span class="brand-accent">Quiz</span></span>
       </div>
       <h2>Anmelden</h2>
       <label for="login-username">Benutzername:</label>
@@ -48,60 +54,58 @@
   </div>
 
   <div id="app-layout" class="app-layout">
-    <nav class="sidebar">
-      <div class="brand">
-        <svg class="logo-icon" viewBox="0 0 40 40" aria-hidden="true">
-          <defs>
-            <linearGradient id="sidebarLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#88c9fa" />
-              <stop offset="100%" stop-color="#2b18a3" />
-            </linearGradient>
-          </defs>
-          <rect width="40" height="40" rx="11" fill="url(#sidebarLogoGrad)" />
-          <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
-        </svg>
-        <h1>MathQuiz</h1>
+    <header class="topnav">
+      <div class="topnav-inner">
+        <button class="brand brand-link" id="brand-home" aria-label="Zur Startseite">
+          <svg class="logo-icon" aria-hidden="true"><use href="#logo-mark"></use></svg>
+          <span class="brand-name">Math<span class="brand-accent">Quiz</span></span>
+        </button>
+
+        <button class="hamburger" id="hamburger" aria-label="Menü öffnen" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <nav class="nav-links" id="nav-links">
+          <button id="nav-start" class="nav-btn active">Start</button>
+          <button id="nav-pricing" class="nav-btn">Preise</button>
+          <button id="nav-uebung" class="nav-btn">Übungsmodus</button>
+          <button id="nav-pruefung" class="nav-btn">Prüfungsmodus</button>
+          <button id="nav-history" class="nav-btn">Ergebnisse</button>
+          <button id="nav-admin" class="nav-btn hidden">Admin</button>
+          <div class="nav-links-divider"></div>
+          <p id="trial-banner" class="trial-banner hidden"></p>
+          <p id="logged-in-as" class="logged-in-as"></p>
+          <button id="btn-login-open" class="nav-btn nav-btn-account">Anmelden</button>
+          <button id="btn-logout" class="nav-btn nav-btn-account hidden">Abmelden</button>
+        </nav>
       </div>
-      <button id="nav-start" class="nav-btn active">🏠 Start</button>
-      <button id="nav-pricing" class="nav-btn">💳 Preise</button>
-      <button id="nav-uebung" class="nav-btn">📖 Übungsmodus</button>
-      <button id="nav-pruefung" class="nav-btn">📝 Prüfungsmodus</button>
-      <button id="nav-history" class="nav-btn">📊 Meine Ergebnisse</button>
-      <button id="nav-admin" class="nav-btn hidden">🔑 Admin</button>
-      <p id="stars-total" class="stars-total hidden"></p>
-      <p id="trial-banner" class="trial-banner hidden"></p>
-      <div id="level-info" class="level-info hidden">
-        <p id="level-title" class="level-title"></p>
-        <div class="level-progress-track">
-          <div id="level-progress-fill" class="level-progress-fill"></div>
-        </div>
-        <p id="level-next" class="level-next"></p>
-      </div>
-      <p id="logged-in-as" class="logged-in-as"></p>
-      <button id="btn-login-open" class="nav-btn">🔐 Anmelden</button>
-      <button id="btn-logout" class="nav-btn hidden">🚪 Abmelden</button>
-      <div class="sidebar-footer-links">
-        <a href="/impressum.html">Impressum</a>
-        <a href="/agb.html">AGB</a>
-      </div>
-    </nav>
+    </header>
 
     <main>
     <!-- Startbildschirm -->
     <section id="screen-start" class="screen">
-      <div class="hero">
-        <svg class="logo-icon logo-icon-large" viewBox="0 0 40 40" aria-hidden="true">
-          <defs>
-            <linearGradient id="heroLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#88c9fa" />
-              <stop offset="100%" stop-color="#2b18a3" />
-            </linearGradient>
-          </defs>
-          <rect width="40" height="40" rx="11" fill="url(#heroLogoGrad)" />
-          <text x="20" y="28" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">√x</text>
-        </svg>
-        <h2 id="hero-title">Willkommen bei MathQuiz!</h2>
-        <p id="hero-sub" class="hero-sub">Melde dich an, um zu üben und deine Ergebnisse anzusehen.</p>
+      <div class="hero hero-grid">
+        <div class="hero-text">
+          <p class="hero-eyebrow">Kurzgymi-Vorbereitung Mathematik</p>
+          <h1 class="hero-title">Math<span class="brand-accent">Quiz</span></h1>
+          <p id="hero-sub" class="hero-sub">Melde dich an, um zu üben und deine Ergebnisse anzusehen.</p>
+          <div class="hero-actions">
+            <button id="hero-cta-uebung" class="btn-primary">Jetzt üben</button>
+            <button id="hero-cta-pricing" class="btn-outline">Preise ansehen</button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <p id="stars-total" class="stars-total hidden"></p>
+          <div id="level-info" class="level-info hidden">
+            <p id="level-title" class="level-title"></p>
+            <div class="level-progress-track">
+              <div id="level-progress-fill" class="level-progress-fill"></div>
+            </div>
+            <p id="level-next" class="level-next"></p>
+          </div>
+        </div>
       </div>
       <div class="dashboard-cards">
         <button id="card-uebung" class="dashboard-card">
@@ -120,11 +124,47 @@
           <span class="dashboard-card-desc">Bisherige Übungen und Prüfungen im Detail ansehen.</span>
         </button>
       </div>
+
+      <!-- Carousel: Feature-Highlights, per Scroll-Snap bedienbar (Maus-Drag, Touch-Wisch, Pfeile) -->
+      <div class="carousel-section">
+        <h2 class="carousel-heading">So funktioniert MathQuiz</h2>
+        <div class="carousel">
+          <button class="carousel-arrow carousel-prev" id="carousel-prev" aria-label="Zurück">‹</button>
+          <div class="carousel-track" id="carousel-track">
+            <article class="carousel-card">
+              <span class="carousel-card-icon">📖</span>
+              <h3>Übungsmodus</h3>
+              <p>Einzelne Aufgaben nach Jahr oder Kategorie, mit stufenweisen Hinweisen und sofortigem Feedback.</p>
+            </article>
+            <article class="carousel-card">
+              <span class="carousel-card-icon">📝</span>
+              <h3>Prüfungsmodus</h3>
+              <p>Ganze Prüfung mit 90-Minuten-Timer, frei blättern zwischen Aufgaben, am Schluss gesammelt abgeben.</p>
+            </article>
+            <article class="carousel-card">
+              <span class="carousel-card-icon">🤖</span>
+              <h3>KI-Bewertung</h3>
+              <p>Handschriftliche Lösungen werden per OCR erkannt und Schritt für Schritt automatisch korrigiert.</p>
+            </article>
+            <article class="carousel-card">
+              <span class="carousel-card-icon">⭐</span>
+              <h3>Sterne &amp; Level</h3>
+              <p>Für jede richtig gelöste Übungsaufgabe gibt es Sterne, Levels und kleine Bonus-Spiele.</p>
+            </article>
+            <article class="carousel-card">
+              <span class="carousel-card-icon">📊</span>
+              <h3>Verlauf</h3>
+              <p>Alle bisherigen Übungen und Prüfungen im Detail nachvollziehen, inklusive Notenschnitt.</p>
+            </article>
+          </div>
+          <button class="carousel-arrow carousel-next" id="carousel-next" aria-label="Weiter">›</button>
+        </div>
+      </div>
     </section>
 
     <!-- Abo-Hinweis: erscheint anstelle von Uebung/Pruefung/Ergebnisse ohne aktives Abo -->
     <section id="screen-subscribe" class="screen hidden">
-      <h2>🔒 Abo erforderlich</h2>
+      <h2>Abo erforderlich</h2>
       <p>Für Übungsmodus, Prüfungsmodus und Ergebnisse benötigst du ein Abo für CHF 1.-/Monat.</p>
       <div class="toolbar">
         <button id="btn-subscribe">Jetzt abonnieren (CHF 1.-/Monat)</button>
@@ -296,6 +336,14 @@
       </div>
     </section>
     </main>
+
+    <footer class="site-footer">
+      <p>© 2026 MathQuiz · Stefan Heinecke</p>
+      <div class="site-footer-links">
+        <a href="/impressum.html">Impressum</a>
+        <a href="/agb.html">AGB</a>
+      </div>
+    </footer>
   </div>
 
   <!-- Level-Aufstieg: Konfetti + Glueckwunschmeldung -->

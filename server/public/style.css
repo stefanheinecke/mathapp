@@ -20,15 +20,33 @@ body {
 
 .app-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
-/* Logo: gradientes Quadrat mit "√x"-Glyphe, in Sidebar/Login/Startbildschirm wiederverwendet. */
+/* Logo: gradientes Quadrat (SVG-Symbol #logo-mark) + Wortmarke, in Topnav/Login wiederverwendet. */
 .brand {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.5rem;
+}
+
+.brand-link {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.brand-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.brand-accent {
+  color: var(--accent);
 }
 
 .logo-icon {
@@ -37,16 +55,6 @@ body {
   flex-shrink: 0;
   border-radius: 10px;
   box-shadow: var(--card-shadow);
-}
-
-.logo-icon-large {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-}
-
-.brand h1 {
-  margin: 0;
 }
 
 /* Login-Bildschirm: eigenstaendig ausserhalb von .app-layout, damit vor dem Einloggen nichts vom
@@ -68,8 +76,8 @@ body {
   box-sizing: border-box;
 }
 
-.login-card .brand h1 {
-  margin: 0 0 0.25rem;
+.login-card .brand {
+  margin-bottom: 0.75rem;
 }
 
 .login-card h2 {
@@ -105,11 +113,8 @@ body {
 }
 
 .logged-in-as {
-  margin-top: auto;
   font-size: 0.85rem;
   color: #666;
-  padding-top: 0.5rem;
-  border-top: 1px solid #eee;
 }
 
 .admin-user-row {
@@ -130,34 +135,64 @@ body {
   color: #b8860b;
 }
 
-.sidebar {
-  flex: 0 0 240px;
-  background: #fff;
-  box-shadow: 2px 0 12px rgba(26, 58, 143, 0.06);
-  padding: 1.5rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+/* ---------- Topnav (ersetzt die frühere linke Sidebar) ---------- */
+.topnav {
   position: sticky;
   top: 0;
-  align-self: flex-start;
-  height: 100vh;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--accent-soft);
 }
 
-.sidebar h1 {
-  font-size: 1.1rem;
-  margin: 0 0 0.5rem;
+.topnav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.hamburger {
+  display: none;
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0.3rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.hamburger svg {
+  width: 24px;
+  height: 24px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.nav-links-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--accent-soft);
+  margin: 0 0.3rem;
 }
 
 .nav-btn {
   text-align: left;
-  padding: 0.65rem 0.8rem;
-  font-size: 0.95rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.92rem;
   font-weight: 500;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
+  white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
@@ -171,33 +206,144 @@ body {
   box-shadow: var(--card-shadow);
 }
 
+.nav-btn-account {
+  border: 1px solid var(--ink);
+  color: var(--ink);
+}
+
 main {
   flex: 1;
-  max-width: 900px;
-  padding: 2rem;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 2rem);
+  box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+  .hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    background: #fff;
+    padding: 0.75rem 1rem 1rem;
+    box-shadow: var(--card-shadow-hover);
+    border-bottom: 1px solid var(--accent-soft);
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  .nav-links-divider {
+    width: auto;
+    height: 1px;
+    margin: 0.3rem 0;
+  }
 }
 
 h1 {
   font-size: 1.4rem;
 }
 
-/* Startbildschirm: Logo + Begruessung, gefolgt von drei anklickbaren Karten statt nur Text. */
-.hero {
-  text-align: center;
-  padding: 1.5rem 0 2rem;
+/* Startbildschirm: Hero (Text + Fortschritts-Widget) gefolgt von drei anklickbaren Karten. */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 2rem;
+  align-items: center;
+  padding: 2rem 0 2.5rem;
 }
 
-.hero .logo-icon-large {
-  margin-bottom: 0.75rem;
+.hero-eyebrow {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.5rem;
 }
 
-.hero h2 {
-  margin: 0 0 0.25rem;
+.hero-title {
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.6rem;
+  color: var(--ink);
 }
 
 .hero-sub {
-  color: #666;
-  margin: 0;
+  color: #555;
+  font-size: 1.05rem;
+  margin: 0 0 1.25rem;
+  max-width: 480px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-outline {
+  padding: 0.7rem 1.4rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--ink), var(--accent));
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+.btn-outline:hover {
+  background: var(--accent-soft);
+}
+
+.hero-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .hero-actions {
+    justify-content: center;
+  }
+
+  .hero-sub {
+    max-width: none;
+  }
 }
 
 .dashboard-cards {
@@ -436,15 +582,26 @@ button {
   font-size: 0.85rem;
 }
 
-.sidebar-footer-links {
-  padding-top: 0.75rem;
-  border-top: 1px solid #eee;
+.site-footer {
+  max-width: 1100px;
+  margin: 2rem auto 0;
+  padding: 1.25rem 1.5rem 2rem;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.8rem;
+  color: #666;
+  border-top: 1px solid var(--accent-soft);
 }
 
-.sidebar-footer-links a {
+.site-footer-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.site-footer-links a {
   color: #666;
 }
 
@@ -539,10 +696,11 @@ button {
 
 .level-info {
   margin-top: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  background: #f0f4ff;
-  border: 1px solid #d3ddf7;
-  border-radius: 6px;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
 }
 
 .level-title {
@@ -829,14 +987,92 @@ button {
   border: none;
 }
 
-/* Hinweis in der Sidebar waehrend der 3-taegigen Testphase. */
+/* Hinweis in der Topnav waehrend der 3-taegigen Testphase. */
 .trial-banner {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   background: var(--accent-soft);
   color: var(--ink);
   border-radius: 8px;
-  padding: 0.5rem 0.7rem;
+  padding: 0.4rem 0.7rem;
   font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* ---------- Feature-Carousel (Startbildschirm) ---------- */
+.carousel-section {
+  margin-top: 2.5rem;
+}
+
+.carousel-heading {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.carousel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-bottom: 0.5rem;
+}
+
+.carousel-card {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: min(260px, 80vw);
+  background: #fff;
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+}
+
+.carousel-card h3 {
+  margin: 0.5rem 0 0.4rem;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.carousel-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.carousel-card-icon {
+  font-size: 1.6rem;
+}
+
+.carousel-arrow {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-soft);
+  background: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.carousel-arrow:hover {
+  background: var(--accent-soft);
+}
+
+@media (max-width: 500px) {
+  .carousel-arrow {
+    display: none;
+  }
 }
 
 .history-problem-list {
@@ -903,55 +1139,9 @@ button {
   }
 }
 
-/* Mobile (iPhone Safari etc.): Sidebar wird zur horizontalen Leiste oben statt fixer Spalte
-   links, damit auf schmalen Bildschirmen nichts ueberlappt oder abgeschnitten wird. */
+/* Mobile (iPhone Safari etc.): einzelne Formular-/Aufgabenelemente an schmale Bildschirme
+   anpassen (Topnav/Hamburger-Menue hat ihre eigenen Regeln weiter oben). */
 @media (max-width: 700px) {
-  .app-layout {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    position: static;
-    height: auto;
-    width: auto;
-    flex: 0 0 auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    border-right: none;
-    border-bottom: 1px solid #ddd;
-    padding: 0.75rem 1rem;
-  }
-
-  .sidebar .brand {
-    width: 100%;
-    margin-bottom: 0.25rem;
-  }
-
-  .nav-btn {
-    flex: 1 1 auto;
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  .stars-total,
-  .level-info {
-    width: 100%;
-    order: 10;
-  }
-
-  .logged-in-as,
-  #btn-logout {
-    width: 100%;
-    order: 11;
-  }
-
-  main {
-    padding: 1rem;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
   .mode-buttons {
     flex-direction: column;
     align-items: stretch;
