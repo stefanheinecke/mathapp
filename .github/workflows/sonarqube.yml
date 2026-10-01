@@ -32,14 +32,8 @@ jobs:
       - name: Tests mit Coverage ausfuehren
         run: npm run coverage
 
-      - name: Coverage-Report pruefen (Debug) # TEMPORAER: zeigt die SF:-Pfade in lcov.info im Log an
-        run: cat coverage/lcov.info
-
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io # SonarQube Cloud - keine Secret-URL noetig, nie leer/falsch konfigurierbar
-        with:
-          args: >
-            -Dsonar.verbose=true
