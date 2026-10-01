@@ -846,7 +846,7 @@ function renderLevelInfo(totalStars) {
   return info;
 }
 
-// CSPRNG-Ersatz fuer Math.random() (Gleitkommazahl in [0, 1)).
+// CSPRNG-Ersatz fuer secureRandom() (Gleitkommazahl in [0, 1)).
 function secureRandom() {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
@@ -887,7 +887,7 @@ const MINIGAME_SYMBOLS = ["🐶", "🐱", "🐭", "🐰", "🦊", "🐻", "🐯"
 function shuffle(array) {
   const copy = [...array];
   for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(secureRandom() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
@@ -1018,15 +1018,15 @@ function openBubblePopGame(onComplete) {
 
   function spawnBubble() {
     if (finished) return;
-    const size = 40 + Math.random() * 25;
+    const size = 40 + secureRandom() * 25;
     const bubble = document.createElement("button");
     bubble.type = "button";
     bubble.className = "bubble";
     bubble.style.width = `${size}px`;
     bubble.style.height = `${size}px`;
-    bubble.style.left = `${Math.random() * Math.max(1, area.clientWidth - size)}px`;
-    bubble.style.top = `${Math.random() * Math.max(1, area.clientHeight - size)}px`;
-    bubble.style.background = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+    bubble.style.left = `${secureRandom() * Math.max(1, area.clientWidth - size)}px`;
+    bubble.style.top = `${secureRandom() * Math.max(1, area.clientHeight - size)}px`;
+    bubble.style.background = BUBBLE_COLORS[Math.floor(secureRandom() * BUBBLE_COLORS.length)];
     bubble.addEventListener("click", () => popBubble(bubble));
     area.appendChild(bubble);
     activeBubbles.push(bubble);
