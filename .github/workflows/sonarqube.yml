@@ -1,0 +1,28 @@
+name: SonarQube
+
+on:
+  push:
+    branches:
+      - '**'
+
+# Nur der zuletzt gepushte Commit pro Branch soll analysiert werden - ein laufender Scan eines
+# aelteren Commits wird abgebrochen, sobald ein neuerer Push eintrifft.
+concurrency:
+  group: sonarqube-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonarqube:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # volle Historie fuer aussagekraeftigere SonarQube-Metriken (z.B. neuer Code)
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
