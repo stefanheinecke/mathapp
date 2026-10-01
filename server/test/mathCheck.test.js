@@ -37,3 +37,17 @@ test("leerer Text liefert ein leeres, aber gueltiges Ergebnis", () => {
   assert.equal(result.ok, true);
   assert.deepEqual(result.analyzed, []);
 });
+
+test("quadratisch: zwei Nullstellen in gleicher Zeile wiederholt bleiben konsistent", () => {
+  // x^2-5x+6=0 hat die Loesungen x=2 und x=3 - beide Zeilen muessen dieselbe Wurzelmenge ergeben.
+  const result = checkSteps("x^2-5x+6=0\nx^2-5x+6=0");
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.finalRoots.x, [2, 3]);
+});
+
+test("Zeile ohne Gleichheitszeichen wird ignoriert statt einen Fehler zu werfen", () => {
+  const result = checkSteps("das ist keine Gleichung\n3x=9");
+  assert.equal(result.ok, true);
+  assert.equal(result.analyzed.length, 1);
+  assert.equal(result.analyzed[0].line, "3x=9");
+});
