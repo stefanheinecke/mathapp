@@ -5,6 +5,11 @@
     "server"
   ],
   "scripts": {
-    "start": "npm start --workspace server"
+    "start": "npm start --workspace server",
+    "test": "node --test",
+    "coverage": "c8 --reporter=lcov --reporter=text --reports-dir=coverage npm test"
+  },
+  "devDependencies": {
+    "c8": "^10.1.2"
   }
 }
