@@ -152,12 +152,21 @@ if (AUTH_BYPASS) {
 // index.html normalerweise ueber express.static ausliefern, ausser im AUTH_BYPASS-Modus: dort
 // wird window.AUTH_BYPASS injiziert, damit app.js den Login-Bildschirm ueberspringt.
 app.get("/", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
   if (!AUTH_BYPASS) return res.sendFile(path.join(__dirname, "public", "index.html"));
   const html = readFileSync(path.join(__dirname, "public", "index.html"), "utf8");
   res.type("html").send(html.replace("<body>", "<body>\n  <script>window.AUTH_BYPASS = true;</script>"));
 });
 
-app.use(express.static(path.join(__dirname, "public")));
+// "no-cache" statt eines maxAge erzwingt eine Revalidierung (ETag/Last-Modified) bei jedem
+// Laden, damit Browser nach einem Deploy nie unbemerkt ein veraltetes app.js/style.css aus dem
+// Heuristik-Cache weiterverwenden (das hat bereits zu TypeErrors durch laengst entfernte
+// Funktionen gefuehrt, z.B. renderProfileProgressChart).
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    setHeaders: (res) => res.setHeader("Cache-Control", "no-cache"),
+  })
+);
 
 
 function getBearerToken(req) {
