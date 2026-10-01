@@ -846,16 +846,23 @@ function renderLevelInfo(totalStars) {
   return info;
 }
 
+// CSPRNG-Ersatz fuer Math.random() (Gleitkommazahl in [0, 1)).
+function secureRandom() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] / 2 ** 32;
+}
+
 function launchConfetti() {
   const container = document.getElementById("confetti-container");
   const colors = ["#f94144", "#f3722c", "#f9c74f", "#90be6d", "#577590", "#277da1"];
   for (let i = 0; i < 60; i++) {
     const piece = document.createElement("div");
     piece.className = "confetti-piece";
-    piece.style.left = `${Math.random() * 100}%`;
-    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-    piece.style.animationDuration = `${1.5 + Math.random() * 1.5}s`;
-    piece.style.animationDelay = `${Math.random() * 0.3}s`;
+    piece.style.left = `${secureRandom() * 100}%`;
+    piece.style.background = colors[Math.floor(secureRandom() * colors.length)];
+    piece.style.animationDuration = `${1.5 + secureRandom() * 1.5}s`;
+    piece.style.animationDelay = `${secureRandom() * 0.3}s`;
     piece.addEventListener("animationend", () => piece.remove());
     container.appendChild(piece);
   }
