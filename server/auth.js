@@ -5,7 +5,8 @@ if (!process.env.SESSION_SECRET) {
   process.exit(1);
 }
 const SESSION_SECRET = process.env.SESSION_SECRET;
-const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 Tage
+// 7 Tage Gueltigkeit, danach muss sich der Nutzer erneut anmelden.
+const TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Passwort-Hashing mit scrypt (in Node eingebaut, kein zusaetzliches Package noetig).
 // Format "salt:hash" (beides hex), damit der Salt pro Nutzer variiert.
