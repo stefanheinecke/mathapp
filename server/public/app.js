@@ -1161,6 +1161,7 @@ async function goToStart() {
   setActiveNav("nav-start");
   showScreen("screen-start");
   await refreshStarsTotal();
+  if (state.token && state.username) await refreshSubscriptionStatus();
 }
 
 // Preise sind oeffentlich einsehbar, kein Login noetig (wie der Startbildschirm).
@@ -1174,7 +1175,7 @@ document.getElementById("nav-pricing").addEventListener("click", goToPricing);
 
 async function goToUebung() {
   if (!requireLogin(goToUebung)) return;
-  if (!requireSubscription("nav-uebung")) return;
+  if (!(await requireSubscription("nav-uebung"))) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-uebung");
   showScreen("screen-uebung-setup");
@@ -1234,7 +1235,7 @@ function selectPruefungVariant(variant) {
 
 async function goToPruefungSetup() {
   if (!requireLogin(goToPruefungSetup)) return;
-  if (!requireSubscription("nav-pruefung")) return;
+  if (!(await requireSubscription("nav-pruefung"))) return;
   if (!confirmLeaveTask()) return;
   pruefungVariant = null;
   document.getElementById("btn-pruefung-jahr").classList.remove("active");
@@ -1685,7 +1686,7 @@ document.getElementById("btn-summary-restart").addEventListener("click", goToSta
 // ---------- Verlauf ----------
 async function goToHistory() {
   if (!requireLogin(goToHistory)) return;
-  if (!requireSubscription("nav-history")) return;
+  if (!(await requireSubscription("nav-history"))) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-history");
   showScreen("screen-history");
@@ -1827,10 +1828,14 @@ function requireLogin(afterLogin) {
 
 // Zeigt den Abo-Bildschirm anstelle von Uebung/Pruefung/Ergebnisse, wenn kein aktives Abo
 // (oder laufende Testphase) besteht (der Admin-Account ist ausgenommen, siehe requireSubscription
-// im Server).
-function requireSubscription(navId) {
+// im Server). Fragt den Status jedes Mal frisch beim Server ab statt den zwischengespeicherten
+// Stand zu nutzen - sonst zeigt die Testphasen-Anzeige nach einer Zahlung faelschlich weiter an,
+// bis der Nutzer sich neu einloggt.
+async function requireSubscription(navId) {
   if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Payrexx-Pruefung)
-  if (state.isAdmin || state.subscriptionActive) return true;
+  if (state.isAdmin) return true;
+  await refreshSubscriptionStatus();
+  if (state.subscriptionActive) return true;
   setActiveNav(navId);
   document.getElementById("subscribe-status").textContent = "";
   document.getElementById("btn-subscribe").disabled = false;
