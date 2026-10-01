@@ -23,7 +23,7 @@ import {
   deactivateSubscription,
 } from "./db.js";
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
-import { createSubscriptionGateway, retrieveTransaction } from "./payrexx.js";
+import { createSubscriptionGateway, retrieveTransaction, retrieveSubscription } from "./payrexx.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -341,34 +341,53 @@ app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
 const PAYREXX_ACTIVE_STATUSES = new Set(["confirmed", "authorized"]);
 const PAYREXX_INACTIVE_STATUSES = new Set(["cancelled", "declined", "error", "chargeback", "refunded", "partially-refunded"]);
 
-// Payrexx ruft diese URL bei jedem Transaktions-Ereignis auf (Konfiguration im Payrexx-Merchant-
-// Backend unter Settings > API, Content-Type "JSON"). Kein requireAuth: Payrexx kennt unser
-// Session-Token nicht - stattdessen wird die Transaktion per API-Key serverseitig neu abgefragt,
-// dem rohen Payload selbst wird nicht vertraut (koennte sonst gefaelscht sein).
+// Payrexx ruft diese URL bei jedem Transaktions- UND jedem Abo-Ereignis auf (Konfiguration im
+// Payrexx-Merchant-Backend unter Settings > API, Content-Type "JSON"). Kein requireAuth: Payrexx
+// kennt unser Session-Token nicht - stattdessen werden Transaktion/Abo per API-Key serverseitig
+// neu abgefragt, dem rohen Payload selbst wird nicht vertraut (koennte sonst gefaelscht sein).
 app.post("/api/subscription/webhook", async (req, res) => {
   try {
     const transactionId = req.body?.transaction?.id;
-    if (!transactionId) {
-      return res.status(400).json({ error: "Kein Transaction-Objekt im Request." });
-    }
-    const transaction = await retrieveTransaction(transactionId);
-    const username = transaction.referenceId;
-    if (!username) {
+    const subscriptionId = req.body?.subscription?.id;
+
+    if (transactionId) {
+      const transaction = await retrieveTransaction(transactionId);
+      const username = transaction.referenceId;
+      if (!username) return res.status(200).json({ ok: true });
+      if (PAYREXX_ACTIVE_STATUSES.has(transaction.status)) {
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        await activateSubscription(username, periodEnd, transaction.id);
+      } else if (PAYREXX_INACTIVE_STATUSES.has(transaction.status)) {
+        await deactivateSubscription(username, transaction.status);
+      }
       return res.status(200).json({ ok: true });
     }
-    if (PAYREXX_ACTIVE_STATUSES.has(transaction.status)) {
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      await activateSubscription(username, periodEnd, transaction.id);
-    } else if (PAYREXX_INACTIVE_STATUSES.has(transaction.status)) {
-      await deactivateSubscription(username, transaction.status);
+
+    if (subscriptionId) {
+      const subscription = await retrieveSubscription(subscriptionId);
+      const username = subscription.invoice?.referenceId;
+      if (!username) return res.status(200).json({ ok: true });
+      if (subscription.status === "active") {
+        // valid_until ist das Ende der aktuell bezahlten Periode, direkt von Payrexx geliefert -
+        // genauer als eine eigene "+1 Monat"-Berechnung; falls ausnahmsweise nicht mitgeliefert,
+        // auf "+1 Monat ab jetzt" zurueckfallen, damit der Zugang nicht faelschlich leer bleibt.
+        const periodEnd = subscription.valid_until ? new Date(subscription.valid_until) : new Date();
+        if (!subscription.valid_until) periodEnd.setMonth(periodEnd.getMonth() + 1);
+        await activateSubscription(username, periodEnd, subscription.id);
+      } else {
+        await deactivateSubscription(username, subscription.status);
+      }
+      return res.status(200).json({ ok: true });
     }
-    res.status(200).json({ ok: true });
+
+    return res.status(400).json({ error: "Kein Transaction- oder Subscription-Objekt im Request." });
   } catch (err) {
     console.error("Payrexx Webhook Fehler:", err);
     res.status(500).json({ error: "Webhook Verarbeitung fehlgeschlagen.", details: err?.message });
   }
 });
+
 
 // Uebungsmodus: einzelne Aufgabe nach Jahr/Kategorie filtern.
 // Pruefungsmodus: alle Aufgaben eines Jahres bzw. einer Kategorie abrufen (gleicher Endpunkt).

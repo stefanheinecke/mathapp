@@ -52,3 +52,10 @@ export async function createSubscriptionGateway({ referenceId, successUrl, faile
 export async function retrieveTransaction(transactionId) {
   return payrexxRequest("GET", `/Transaction/${encodeURIComponent(transactionId)}/`);
 }
+
+// Fragt ein Abo serverseitig erneut ab (gleicher Grund wie bei retrieveTransaction oben) -
+// Payrexx schickt bei Abo-Ereignissen (erstellt, verlaengert, gekuendigt) ein eigenes
+// "subscription"-Webhook-Payload statt eines "transaction"-Payloads.
+export async function retrieveSubscription(subscriptionId) {
+  return payrexxRequest("GET", `/Subscription/${encodeURIComponent(subscriptionId)}/`);
+}
