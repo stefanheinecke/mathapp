@@ -1204,16 +1204,6 @@ navLinksEl.querySelectorAll(".nav-btn").forEach((btn) => {
   });
 });
 
-// ---------- Feature-Carousel (Scroll-Snap, Pfeile verschieben um eine Kartenbreite) ----------
-const carouselTrack = document.getElementById("carousel-track");
-function scrollCarousel(direction) {
-  const card = carouselTrack.querySelector(".carousel-card");
-  const step = (card?.offsetWidth || 260) + 16;
-  carouselTrack.scrollBy({ left: direction * step, behavior: "smooth" });
-}
-document.getElementById("carousel-prev").addEventListener("click", () => scrollCarousel(-1));
-document.getElementById("carousel-next").addEventListener("click", () => scrollCarousel(1));
-
 document.getElementById("uebung-year").addEventListener("change", loadUebungProblems);
 document.getElementById("uebung-category").addEventListener("change", loadUebungProblems);
 

@@ -109,56 +109,68 @@
       </div>
       <div class="dashboard-cards">
         <button id="card-uebung" class="dashboard-card">
-          <span class="dashboard-card-icon">📖</span>
           <span class="dashboard-card-title">Übungsmodus</span>
           <span class="dashboard-card-desc">Einzelne Aufgaben in Ruhe üben, mit Hinweisen und sofortigem Feedback.</span>
         </button>
         <button id="card-pruefung" class="dashboard-card">
-          <span class="dashboard-card-icon">📝</span>
           <span class="dashboard-card-title">Prüfungsmodus</span>
           <span class="dashboard-card-desc">Ganze Prüfung simulieren: 90 Minuten, frei blättern, am Schluss abgeben.</span>
         </button>
         <button id="card-history" class="dashboard-card">
-          <span class="dashboard-card-icon">📊</span>
           <span class="dashboard-card-title">Meine Ergebnisse</span>
           <span class="dashboard-card-desc">Bisherige Übungen und Prüfungen im Detail ansehen.</span>
         </button>
       </div>
 
-      <!-- Carousel: Feature-Highlights, per Scroll-Snap bedienbar (Maus-Drag, Touch-Wisch, Pfeile) -->
-      <div class="carousel-section">
-        <h2 class="carousel-heading">So funktioniert MathQuiz</h2>
-        <div class="carousel">
-          <button class="carousel-arrow carousel-prev" id="carousel-prev" aria-label="Zurück">‹</button>
-          <div class="carousel-track" id="carousel-track">
-            <article class="carousel-card">
-              <span class="carousel-card-icon">📖</span>
-              <h3>Übungsmodus</h3>
-              <p>Einzelne Aufgaben nach Jahr oder Kategorie, mit stufenweisen Hinweisen und sofortigem Feedback.</p>
-            </article>
-            <article class="carousel-card">
-              <span class="carousel-card-icon">📝</span>
-              <h3>Prüfungsmodus</h3>
-              <p>Ganze Prüfung mit 90-Minuten-Timer, frei blättern zwischen Aufgaben, am Schluss gesammelt abgeben.</p>
-            </article>
-            <article class="carousel-card">
-              <span class="carousel-card-icon">🤖</span>
-              <h3>KI-Bewertung</h3>
-              <p>Handschriftliche Lösungen werden per OCR erkannt und Schritt für Schritt automatisch korrigiert.</p>
-            </article>
-            <article class="carousel-card">
-              <span class="carousel-card-icon">⭐</span>
-              <h3>Sterne &amp; Level</h3>
-              <p>Für jede richtig gelöste Übungsaufgabe gibt es Sterne, Levels und kleine Bonus-Spiele.</p>
-            </article>
-            <article class="carousel-card">
-              <span class="carousel-card-icon">📊</span>
-              <h3>Verlauf</h3>
-              <p>Alle bisherigen Übungen und Prüfungen im Detail nachvollziehen, inklusive Notenschnitt.</p>
-            </article>
+      <!-- Feature-Showcase: abwechselnd Text/Mini-Vorschau statt Carousel. Die Vorschauen sind
+           leichte CSS-Mockups (keine echten Screenshots), da es noch keine Produktfotos gibt. -->
+      <div class="showcase-section">
+        <article class="showcase-row">
+          <div class="showcase-text">
+            <h2>Übungsmodus</h2>
+            <p>Einzelne Aufgaben nach Jahr oder Kategorie auswählen, mit stufenweisen Hinweisen und sofortigem Feedback zur handschriftlichen Lösung.</p>
           </div>
-          <button class="carousel-arrow carousel-next" id="carousel-next" aria-label="Weiter">›</button>
-        </div>
+          <div class="mockup-frame">
+            <div class="mockup-bar"><span></span><span></span><span></span></div>
+            <div class="mockup-body">
+              <p class="mockup-line mockup-line-title">3x + 5 = 20</p>
+              <p class="mockup-line mockup-line-short"></p>
+              <p class="mockup-line mockup-line-short"></p>
+              <span class="mockup-badge mockup-badge-ok">Richtig ✓</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="showcase-row showcase-row-reverse">
+          <div class="showcase-text">
+            <h2>Prüfungsmodus</h2>
+            <p>Ganze Prüfung mit 90-Minuten-Timer simulieren, frei zwischen Aufgaben blättern und am Schluss gesammelt abgeben.</p>
+          </div>
+          <div class="mockup-frame">
+            <div class="mockup-bar"><span></span><span></span><span></span></div>
+            <div class="mockup-body">
+              <span class="mockup-badge mockup-badge-timer">⏱ 72:15</span>
+              <p class="mockup-line mockup-line-short"></p>
+              <p class="mockup-line mockup-line-title">Aufgabe 4 von 10</p>
+              <p class="mockup-line mockup-line-short"></p>
+            </div>
+          </div>
+        </article>
+
+        <article class="showcase-row">
+          <div class="showcase-text">
+            <h2>Meine Ergebnisse</h2>
+            <p>Alle bisherigen Übungen und Prüfungen im Detail nachvollziehen, inklusive Punkten, Prozent und Notenschnitt.</p>
+          </div>
+          <div class="mockup-frame">
+            <div class="mockup-bar"><span></span><span></span><span></span></div>
+            <div class="mockup-body mockup-body-list">
+              <div class="mockup-list-row"><span class="mockup-line mockup-line-short"></span><span class="mockup-badge mockup-badge-ok">5.4</span></div>
+              <div class="mockup-list-row"><span class="mockup-line mockup-line-short"></span><span class="mockup-badge mockup-badge-ok">4.8</span></div>
+              <div class="mockup-list-row"><span class="mockup-line mockup-line-short"></span><span class="mockup-badge mockup-badge-timer">6.0</span></div>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 

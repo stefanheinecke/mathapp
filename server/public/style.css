@@ -372,10 +372,6 @@ h1 {
   box-shadow: var(--card-shadow-hover);
 }
 
-.dashboard-card-icon {
-  font-size: 1.8rem;
-}
-
 .dashboard-card-title {
   font-size: 1.05rem;
   font-weight: 700;
@@ -999,79 +995,125 @@ button {
   white-space: nowrap;
 }
 
-/* ---------- Feature-Carousel (Startbildschirm) ---------- */
-.carousel-section {
-  margin-top: 2.5rem;
-}
-
-.carousel-heading {
-  font-size: 1.3rem;
-  margin-bottom: 1rem;
-}
-
-.carousel {
+/* ---------- Feature-Showcase (Startbildschirm, abwechselnd Text/Mini-Vorschau) ---------- */
+.showcase-section {
+  margin-top: 3rem;
   display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.showcase-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.carousel-track {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  padding-bottom: 0.5rem;
+.showcase-row-reverse .showcase-text {
+  order: 2;
 }
 
-.carousel-card {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  width: min(260px, 80vw);
+.showcase-text h2 {
+  margin: 0 0 0.6rem;
+  color: var(--ink);
+  font-size: 1.5rem;
+}
+
+.showcase-text p {
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Leichtes CSS-Mockup eines Bildschirmausschnitts (keine echten Screenshots vorhanden). */
+.mockup-frame {
   background: #fff;
   border: 1px solid var(--accent-soft);
   border-radius: var(--radius);
-  padding: 1.5rem;
   box-shadow: var(--card-shadow);
+  overflow: hidden;
 }
 
-.carousel-card h3 {
-  margin: 0.5rem 0 0.4rem;
-  color: var(--ink);
-  font-size: 1.05rem;
+.mockup-bar {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--accent-soft);
 }
 
-.carousel-card p {
-  margin: 0;
-  font-size: 0.88rem;
-  color: #555;
-  line-height: 1.5;
-}
-
-.carousel-card-icon {
-  font-size: 1.6rem;
-}
-
-.carousel-arrow {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+.mockup-bar span {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  border: 1px solid var(--accent-soft);
-  background: #fff;
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--ink);
-}
-
-.carousel-arrow:hover {
   background: var(--accent-soft);
 }
 
-@media (max-width: 500px) {
-  .carousel-arrow {
-    display: none;
+.mockup-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mockup-line {
+  height: 0.9rem;
+  background: var(--bg);
+  border-radius: 4px;
+  margin: 0;
+  width: 70%;
+}
+
+.mockup-line-title {
+  width: 60%;
+  height: 1.1rem;
+  background: none;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.mockup-line-short {
+  width: 45%;
+}
+
+.mockup-badge {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+}
+
+.mockup-badge-ok {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.mockup-badge-timer {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.mockup-body-list {
+  gap: 0.75rem;
+}
+
+.mockup-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+@media (max-width: 760px) {
+  .showcase-row {
+    grid-template-columns: 1fr;
+  }
+
+  .showcase-row-reverse .showcase-text {
+    order: initial;
   }
 }
 
