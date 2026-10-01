@@ -1065,6 +1065,29 @@ button {
 
 .profile-charts-heading {
   margin-top: 2rem;
+  margin-bottom: 0;
+}
+
+.profile-chart-legend {
+  color: #555;
+  font-size: 0.85rem;
+  margin: 0.4rem 0 1rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+}
+
+.legend-dot-ok {
+  background: #22c55e;
+}
+
+.legend-dot-fail {
+  background: #ef4444;
 }
 
 .profile-charts {

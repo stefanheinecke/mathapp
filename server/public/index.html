@@ -135,8 +135,8 @@
             <div class="mockup-bar"><span></span><span></span><span></span></div>
             <div class="mockup-body">
               <p class="mockup-line mockup-line-title">3x + 5 = 20</p>
-              <p class="mockup-line mockup-line-short">...</p>
-              <p class="mockup-line mockup-line-short">x = 5</p>
+              <p class="mockup-line mockup-line-title">...</p>
+              <p class="mockup-line mockup-line-title">x = 5</p>
               <span class="mockup-badge mockup-badge-ok">Richtig ✓</span>
             </div>
           </div>
@@ -152,8 +152,8 @@
             <div class="mockup-body">
               <span class="mockup-badge mockup-badge-timer">⏱ 72:15</span>
               <p class="mockup-line mockup-line-title">Aufgabe 4 von 27</p>
-              <p class="mockup-line mockup-line-short">Dividiere die 2.Potenz von 12 durch die 3.Potenz von 2</p>
-              <p class="mockup-line mockup-line-short">...</p>
+              <p class="mockup-line mockup-line-title">Dividiere die 2.Potenz von 12 durch die 3.Potenz von 2</p>
+              <p class="mockup-line mockup-line-title">...</p>
             </div>
           </div>
         </article>
@@ -166,9 +166,9 @@
           <div class="mockup-frame">
             <div class="mockup-bar"><span></span><span></span><span></span></div>
             <div class="mockup-body mockup-body-list">
-              <div class="mockup-list-row"><span class="mockup-line mockup-line-short">28.09.2026</span><span class="mockup-line mockup-line-short">Prüfung</span><span class="mockup-badge mockup-badge-ok">5.4</span></div>
-              <div class="mockup-list-row"><span class="mockup-line mockup-line-short">30.09.2026</span><span class="mockup-line mockup-line-short">Übung</span><span class="mockup-badge mockup-badge-ok">6.0</span></div>
-              <div class="mockup-list-row"><span class="mockup-line mockup-line-short">...</span><span class="mockup-line mockup-line-short">...</span><span class="mockup-badge mockup-badge-ok">...</span></div>
+              <div class="mockup-list-row"><span class="mockup-line mockup-line-title">28.09.2026</span><span class="mockup-line mockup-line-title">Prüfung</span><span class="mockup-badge mockup-badge-ok">5.4</span></div>
+              <div class="mockup-list-row"><span class="mockup-line mockup-line-title">30.09.2026</span><span class="mockup-line mockup-line-title">Übung</span><span class="mockup-badge mockup-badge-ok">6.0</span></div>
+              <div class="mockup-list-row"><span class="mockup-line mockup-line-title">...</span><span class="mockup-line mockup-line-title">...</span><span class="mockup-badge mockup-badge-ok">...</span></div>
             </div>
           </div>
         </article>
@@ -377,9 +377,6 @@
 
         <div class="profile-card">
           <h3>Passwort ändern</h3>
-          <label for="profile-current-password">Aktuelles Passwort</label>
-          <input id="profile-current-password" type="password" maxlength="200" autocomplete="current-password" />
-
           <label for="profile-new-password">Neues Passwort</label>
           <input id="profile-new-password" type="password" maxlength="200" autocomplete="new-password" />
 
@@ -403,14 +400,15 @@
       </div>
 
       <h3 class="profile-charts-heading">Fortschritt &amp; Auswertung</h3>
+      <p class="profile-chart-legend"><span class="legend-dot legend-dot-ok"></span> erfolgreich &nbsp;&nbsp;<span class="legend-dot legend-dot-fail"></span> nicht bestanden</p>
       <div class="profile-charts">
         <div class="profile-chart-card">
-          <p class="profile-chart-title">Ergebnis (%) über Zeit</p>
-          <svg id="profile-chart-progress" class="profile-chart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg>
+          <p class="profile-chart-title">Übungen pro Tag</p>
+          <svg id="profile-chart-uebung" class="profile-chart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg>
         </div>
         <div class="profile-chart-card">
-          <p class="profile-chart-title">Durchschnitt nach Modus</p>
-          <svg id="profile-chart-modes" class="profile-chart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg>
+          <p class="profile-chart-title">Prüfungen pro Tag</p>
+          <svg id="profile-chart-pruefung" class="profile-chart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg>
         </div>
       </div>
       <p id="profile-charts-empty" class="status hidden">Noch keine Ergebnisse für eine Auswertung vorhanden.</p>

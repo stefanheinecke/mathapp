@@ -303,20 +303,14 @@ app.put("/api/profile", requireAuth, async (req, res) => {
   }
 });
 
-// Eigenes Passwort aendern (im Gegensatz zu /api/admin/users/:username/password verlangt dies
-// das aktuelle Passwort, nicht Admin-Rechte).
+// Eigenes Passwort aendern (keine Admin-Rechte noetig). Das aktuelle Passwort wird NICHT erneut
+// verlangt - das gueltige Session-Token gilt hier bereits als Nachweis, dass die Person
+// eingeloggt ist (gleiche Annahme wie bei allen anderen /api/profile-Routen).
 app.put("/api/profile/password", requireAuth, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body || {};
-    if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
-      return res.status(400).json({ error: "Aktuelles und neues Passwort sind erforderlich." });
-    }
-    if (newPassword.length < 6 || newPassword.length > 200) {
+    const { newPassword } = req.body || {};
+    if (typeof newPassword !== "string" || newPassword.length < 6 || newPassword.length > 200) {
       return res.status(400).json({ error: "Das neue Passwort muss mindestens 6 Zeichen lang sein." });
-    }
-    const user = await findUserByUsername(req.user.username);
-    if (!user || !verifyPassword(currentPassword, user.password_hash)) {
-      return res.status(401).json({ error: "Aktuelles Passwort ist falsch." });
     }
     await updateUserPassword(req.user.username, newPassword);
     res.json({ ok: true });

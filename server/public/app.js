@@ -1694,8 +1694,6 @@ async function goToProfile() {
 
 document.getElementById("nav-profile").addEventListener("click", goToProfile);
 
-const PROFILE_MODE_LABELS = { uebung: "Übung", pruefung_jahr: "Prüfung (Jahr)", pruefung_kategorie: "Prüfung (Kategorie)" };
-
 async function loadProfile() {
   document.getElementById("profile-save-error").classList.add("hidden");
   document.getElementById("profile-save-success").classList.add("hidden");
@@ -1731,8 +1729,17 @@ async function loadProfile() {
 
   const results = Array.isArray(data.results) ? data.results : [];
   document.getElementById("profile-charts-empty").classList.toggle("hidden", results.length > 0);
-  renderProfileProgressChart(results);
-  renderProfileModesChart(results);
+  renderProfileDailyChart(
+    "profile-chart-uebung",
+    results.filter((r) => r.mode === "uebung"),
+    (r) => Number(r.correct) >= Number(r.total)
+  );
+  renderProfileDailyChart(
+    "profile-chart-pruefung",
+    results.filter((r) => isPruefungMode(r.mode)),
+    // Bestanden = Schweizer Note >= 4.0, entspricht mindestens 60% der Punkte (siehe computeGrade).
+    (r) => Number(r.percent) >= 60
+  );
 }
 
 function svgEl(tag, attrs) {
@@ -1741,69 +1748,58 @@ function svgEl(tag, attrs) {
   return el;
 }
 
-// Einfaches Liniendiagramm (kein Chart-Framework noetig): Prozent-Ergebnis je Lauf, chronologisch.
-function renderProfileProgressChart(results) {
-  const svg = document.getElementById("profile-chart-progress");
-  svg.innerHTML = "";
-  const points = [...results].reverse();
-  if (points.length === 0) return;
-  const w = 320;
-  const h = 140;
-  const pad = 20;
-  const maxIndex = points.length - 1 || 1;
-  const coords = points.map((r, i) => {
-    const x = pad + (i / maxIndex) * (w - 2 * pad);
-    const y = h - pad - (Number(r.percent) / 100) * (h - 2 * pad);
-    return [x, y];
+// Gruppiert Ergebnisse nach Kalendertag (chronologisch) und zaehlt pro Tag, wie viele davon
+// die uebergebene pass()-Bedingung erfuellen.
+function groupResultsByDay(results, pass) {
+  const byDay = new Map();
+  results.forEach((r) => {
+    const day = new Date(r.created_at).toISOString().slice(0, 10);
+    if (!byDay.has(day)) byDay.set(day, { total: 0, passed: 0 });
+    const entry = byDay.get(day);
+    entry.total += 1;
+    if (pass(r)) entry.passed += 1;
   });
-  svg.appendChild(
-    svgEl("polyline", {
-      points: coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" "),
-      fill: "none",
-      stroke: "#2b18a3",
-      "stroke-width": "2",
-    })
-  );
-  coords.forEach(([x, y]) => {
-    svg.appendChild(svgEl("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: "3", fill: "#f353d5" }));
-  });
+  return [...byDay.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
 }
 
-// Einfaches Balkendiagramm: Durchschnitts-Prozent pro Modus (Uebung/Pruefung Jahr/Kategorie).
-function renderProfileModesChart(results) {
-  const svg = document.getElementById("profile-chart-modes");
+// Gestapeltes Balkendiagramm pro Tag: unten gruen (bestanden), oben rot (nicht bestanden) -
+// z.B. 5 Uebungen an einem Tag, 4 davon richtig -> ein Balken mit 4 gruenen + 1 rotem Anteil.
+function renderProfileDailyChart(svgId, results, pass) {
+  const svg = document.getElementById(svgId);
   svg.innerHTML = "";
-  const groups = {};
-  results.forEach((r) => {
-    (groups[r.mode] ||= []).push(Number(r.percent));
-  });
-  const modes = Object.keys(groups);
-  if (modes.length === 0) return;
+  const days = groupResultsByDay(results, pass);
+  if (days.length === 0) return;
   const w = 320;
   const h = 140;
   const pad = 24;
-  const slot = (w - 2 * pad) / modes.length;
-  const barWidth = Math.max(20, slot - 16);
-  modes.forEach((mode, i) => {
-    const values = groups[mode];
-    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const barHeight = (avg / 100) * (h - 2 * pad);
+  const maxTotal = Math.max(...days.map(([, v]) => v.total));
+  const slot = (w - 2 * pad) / days.length;
+  const barWidth = Math.max(14, Math.min(40, slot - 10));
+  days.forEach(([day, v], i) => {
     const x = pad + i * slot + (slot - barWidth) / 2;
-    const y = h - pad - barHeight;
-    svg.appendChild(svgEl("rect", { x, y, width: barWidth, height: barHeight, rx: 3, fill: "#88c9fa" }));
+    const passedHeight = (v.passed / maxTotal) * (h - 2 * pad);
+    const failedHeight = ((v.total - v.passed) / maxTotal) * (h - 2 * pad);
+    const passedY = h - pad - passedHeight;
+    const failedY = passedY - failedHeight;
+    if (v.passed > 0) {
+      svg.appendChild(svgEl("rect", { x, y: passedY, width: barWidth, height: passedHeight, fill: "#22c55e", rx: 2 }));
+    }
+    if (v.total - v.passed > 0) {
+      svg.appendChild(svgEl("rect", { x, y: failedY, width: barWidth, height: failedHeight, fill: "#ef4444", rx: 2 }));
+    }
     svg.appendChild(
       svgEl("text", { x: x + barWidth / 2, y: h - 6, "text-anchor": "middle", "font-size": "9", fill: "#555" })
-    ).textContent = PROFILE_MODE_LABELS[mode] || mode;
+    ).textContent = new Date(day).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" });
     svg.appendChild(
       svgEl("text", {
         x: x + barWidth / 2,
-        y: Math.max(10, y - 4),
+        y: Math.max(10, failedY - 4),
         "text-anchor": "middle",
         "font-size": "10",
         "font-weight": "700",
         fill: "#2b18a3",
       })
-    ).textContent = `${avg.toFixed(0)}%`;
+    ).textContent = String(v.total);
   });
 }
 
@@ -1835,7 +1831,6 @@ document.getElementById("btn-profile-change-password").addEventListener("click",
   const successEl = document.getElementById("profile-password-success");
   errorEl.classList.add("hidden");
   successEl.classList.add("hidden");
-  const currentPassword = document.getElementById("profile-current-password").value;
   const newPassword = document.getElementById("profile-new-password").value;
   const confirmPassword = document.getElementById("profile-new-password-confirm").value;
   if (newPassword !== confirmPassword) {
@@ -1846,14 +1841,13 @@ document.getElementById("btn-profile-change-password").addEventListener("click",
   const { ok, data } = await api("/api/profile/password", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ currentPassword, newPassword }),
+    body: JSON.stringify({ newPassword }),
   });
   if (!ok) {
     errorEl.textContent = data.error || "Passwort konnte nicht geändert werden.";
     errorEl.classList.remove("hidden");
     return;
   }
-  document.getElementById("profile-current-password").value = "";
   document.getElementById("profile-new-password").value = "";
   document.getElementById("profile-new-password-confirm").value = "";
   successEl.textContent = "Passwort wurde geändert.";
