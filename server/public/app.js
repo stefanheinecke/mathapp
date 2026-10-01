@@ -840,7 +840,7 @@ function renderLevelInfo(totalStars) {
   document.getElementById("level-title").textContent = `Level ${info.level} – ${info.title}`;
   document.getElementById("level-progress-fill").style.width = `${info.progressPercent}%`;
   document.getElementById("level-next").textContent = info.isMaxLevel
-    ? "Höchstes Level erreicht!"
+    ? "Höchstes Level erreicht !"
     : `Noch ${info.starsToNext} ⭐ bis Level ${info.level + 1}`;
   document.getElementById("level-info").classList.remove("hidden");
   return info;
