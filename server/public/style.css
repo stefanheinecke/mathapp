@@ -426,6 +426,12 @@ h1 {
   text-align: center;
 }
 
+.hero-video-direct-link {
+  color: var(--ink);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 @media (max-width: 760px) {
   .hero-grid {
     grid-template-columns: 1fr;
