@@ -1217,7 +1217,10 @@ const heroVideo = document.getElementById("hero-video");
 const heroVideoStatus = document.getElementById("hero-video-status");
 const heroVideoDirectLink = document.getElementById("hero-video-direct-link");
 const heroVideoFrame = document.getElementById("hero-video-frame");
-document.getElementById("hero-video-preview").addEventListener("click", () => {
+document.getElementById("hero-video-preview").addEventListener("click", (event) => {
+  // Keep playback inline when JavaScript is available; the real MP4 href remains
+  // a native Safari fallback if this handler is unavailable or inline play is rejected.
+  event.preventDefault();
   // Remove the poster overlay immediately so native controls remain available if the
   // browser declines scripted playback. Calling play() in this tap preserves iOS gesture.
   heroVideoFrame.classList.add("is-playing");
