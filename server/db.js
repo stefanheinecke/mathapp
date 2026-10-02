@@ -176,6 +176,19 @@ export async function getResultsForPlayer(playerName) {
   return rows;
 }
 
+export async function awardExerciseBonusStar(playerName, resultId) {
+  const { rows } = await pool.query(
+    `UPDATE results
+     SET details = jsonb_set(details, '{0,bonusStars}', '1'::jsonb, true),
+         stars = stars + CASE WHEN COALESCE((details->0->>'bonusStars')::integer, 0) < 1 THEN 1 ELSE 0 END
+     WHERE id = $1 AND player_name = $2 AND mode = 'uebung'
+       AND jsonb_typeof(details) = 'array' AND jsonb_array_length(details) = 1
+     RETURNING id`,
+    [resultId, playerName]
+  );
+  return rows.length > 0;
+}
+
 // ---------- Abo (Payrexx, CHF 1.-/Monat) ----------
 
 // Liefert den Abo-Status fuers Frontend (aktiv nur, wenn Status "active" UND die aktuelle

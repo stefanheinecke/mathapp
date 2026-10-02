@@ -10,6 +10,7 @@ import { PROBLEMS, filterProblems, listYears, listCategories } from "./problems.
 import {
   initDb,
   saveResult,
+  awardExerciseBonusStar,
   getResultsForPlayer,
   findUserByUsername,
   listUsers,
@@ -744,6 +745,21 @@ app.post("/api/results", requireAuth, requireSubscription, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Ergebnis konnte nicht gespeichert werden.", details: err?.message });
+  }
+});
+
+app.post("/api/results/:id/bonus-star", requireAuth, requireSubscription, async (req, res) => {
+  const resultId = Number(req.params.id);
+  if (!Number.isInteger(resultId) || resultId < 1) {
+    return res.status(400).json({ error: "Ungueltige Ergebnis-ID." });
+  }
+  try {
+    const updated = await awardExerciseBonusStar(req.user.username, resultId);
+    if (!updated) return res.status(404).json({ error: "Übungsergebnis nicht gefunden." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Zusatzstern konnte nicht gespeichert werden." });
   }
 });
 

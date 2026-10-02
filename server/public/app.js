@@ -701,6 +701,8 @@ const state = {
   queue: [],
   currentIndex: 0,
   results: [], // { problemId, points, awarded, fullyCorrect }
+  runSaved: false,
+  savedResultId: null,
   answers: [], // Pruefungsmodus: pro Aufgabe { image, hasInk, hintsUsed, nextHintIndex, revealedHints }
   nextHintIndex: 0,
   hintsUsedForCurrent: false,
@@ -1283,6 +1285,8 @@ function startTaskFlow(queue) {
   state.queue = queue;
   state.currentIndex = 0;
   state.results = [];
+  state.runSaved = false;
+  state.savedResultId = null;
   state.answers = queue.map(() => ({
     image: null,
     hasInk: false,
@@ -1485,10 +1489,19 @@ submitBtn.addEventListener("click", async () => {
         openGame((won) => {
           resultEntry.bonusStars = won ? 1 : 0;
           bonusBtn.textContent = won ? "🎉 Zusatzstern verdient!" : "😕 Kein Zusatzstern diesmal";
+          if (won && state.savedResultId) {
+            api(`/api/results/${state.savedResultId}/bonus-star`, { method: "POST" }).then(({ ok }) => {
+              if (!ok) statusEl.textContent = "Der Zusatzstern konnte nicht gespeichert werden.";
+            });
+          }
         });
       };
     }
 
+    if (state.mode === "uebung") {
+      const saved = await saveRunResult();
+      if (!saved) statusEl.textContent = "Bewertung abgeschlossen, aber das Ergebnis konnte nicht gespeichert werden. Beim Weitergehen wird erneut versucht zu speichern.";
+    }
     submitBtn.classList.add("hidden");
     nextBtn.classList.remove("hidden");
   } catch (err) {
@@ -1637,15 +1650,7 @@ async function finishRun() {
     ? 0
     : state.results.reduce((sum, r) => sum + (r.fullyCorrect ? 3 : 0) + (r.bonusStars || 0), 0);
 
-  const { ok: saved } = await api("/api/results", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mode: state.mode,
-      scope: String(state.scope),
-      details: state.results,
-    }),
-  });
+  const saved = await saveRunResult();
 
   document.getElementById("summary-score").textContent =
     `${awardedPoints} von ${totalPoints} Punkten – ` +
@@ -1679,6 +1684,24 @@ async function finishRun() {
   if (levelAfter.level > levelBefore.level) {
     showLevelUpCelebration(levelAfter);
   }
+}
+
+async function saveRunResult() {
+  if (state.runSaved) return true;
+  const { ok, data } = await api("/api/results", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode: state.mode,
+      scope: String(state.scope),
+      details: state.results,
+    }),
+  });
+  if (ok) {
+    state.runSaved = true;
+    state.savedResultId = data.id;
+  }
+  return ok;
 }
 
 document.getElementById("btn-summary-restart").addEventListener("click", goToStart);
