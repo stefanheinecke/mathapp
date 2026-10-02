@@ -102,6 +102,20 @@ body {
   margin-top: 0.25rem;
 }
 
+.auth-switch {
+  margin: 1rem 0 0;
+  color: #555;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.text-button {
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 .login-error {
   color: #a30000;
   background: #fdecea;
@@ -949,7 +963,11 @@ button {
 }
 
 .pricing-card.featured {
-  border: 2px solid var(--accent);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.pricing-card.current-plan {
+  border: 3px solid var(--ink);
   box-shadow: var(--card-shadow-hover);
 }
 
@@ -991,6 +1009,17 @@ button {
   background: linear-gradient(135deg, var(--ink), var(--accent));
   color: #fff;
   border: none;
+}
+
+.btn-danger {
+  margin-top: 0.5rem;
+  background: #a32638;
+  color: #fff;
+  border: 1px solid #a32638;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #811b2a;
 }
 
 /* Hinweis in der Topnav waehrend der 3-taegigen Testphase. */

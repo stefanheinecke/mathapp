@@ -696,6 +696,8 @@ const state = {
   isAdmin: localStorage.getItem("matheapp_isAdmin") === "true",
   meta: { years: [], categories: [] },
   subscriptionActive: false,
+  paidSubscriptionActive: false,
+  subscriptionStatus: "inactive",
   mode: null, // 'uebung' | 'pruefung_jahr' | 'pruefung_kategorie'
   scope: null, // problemId (uebung) oder Jahr/Kategorie (pruefung)
   queue: [],
@@ -1171,6 +1173,26 @@ async function goToPricing() {
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-pricing");
   showScreen("screen-pricing");
+  if (state.token && state.username) await refreshSubscriptionStatus();
+  renderPricingPlans();
+}
+
+function renderPricingPlans() {
+  const freeCard = document.getElementById("pricing-free-card");
+  const paidCard = document.getElementById("pricing-paid-card");
+  const freeButton = document.getElementById("btn-pricing-free");
+  const paidButton = document.getElementById("btn-pricing-subscribe");
+  const loggedIn = Boolean(state.token && state.username);
+  const freeIsCurrent = loggedIn && !state.paidSubscriptionActive;
+  const paidIsCurrent = loggedIn && state.paidSubscriptionActive;
+  freeCard.classList.toggle("current-plan", freeIsCurrent);
+  paidCard.classList.toggle("current-plan", paidIsCurrent);
+
+  freeButton.textContent = freeIsCurrent ? "Aktueller Plan" : "Jetzt starten";
+  freeButton.disabled = freeIsCurrent || paidIsCurrent;
+  freeButton.classList.toggle("hidden", paidIsCurrent);
+  paidButton.textContent = paidIsCurrent ? "Aktueller Plan" : "Jetzt starten";
+  paidButton.disabled = paidIsCurrent;
 }
 
 document.getElementById("nav-pricing").addEventListener("click", goToPricing);
@@ -1722,6 +1744,7 @@ async function loadProfile() {
   document.getElementById("profile-save-success").classList.add("hidden");
   document.getElementById("profile-password-error").classList.add("hidden");
   document.getElementById("profile-password-success").classList.add("hidden");
+  document.getElementById("profile-subscription-action-status").classList.add("hidden");
 
   const { ok, data } = await api("/api/profile");
   if (!ok) return;
@@ -1735,11 +1758,17 @@ async function loadProfile() {
   const planEl = document.getElementById("profile-plan");
   const sinceEl = document.getElementById("profile-plan-since");
   const noteEl = document.getElementById("profile-plan-note");
+  const cancelButton = document.getElementById("btn-profile-cancel-subscription");
   const sub = data.subscription;
-  if (sub.status === "active" && sub.currentPeriodEnd && new Date(sub.currentPeriodEnd) > new Date()) {
-    planEl.textContent = "MathQuiz Abo (CHF 1.-/Monat)";
+  const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
+  const paidAccessActive = periodEnd && periodEnd > new Date() && ["active", "cancelled"].includes(sub.status);
+  cancelButton.classList.toggle("hidden", !(sub.status === "active" && paidAccessActive && sub.payrexxSubscriptionId));
+  if (paidAccessActive) {
+    planEl.textContent = sub.status === "cancelled" ? "MathQuiz Abo (gekündigt)" : "MathQuiz Abo (CHF 1.-/Monat)";
     sinceEl.textContent = sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("de-CH") : "–";
-    noteEl.textContent = `Nächste Abrechnung: ${new Date(sub.currentPeriodEnd).toLocaleDateString("de-CH")}`;
+    noteEl.textContent = sub.status === "cancelled"
+      ? `Keine weitere Abbuchung. Zugang bis ${periodEnd.toLocaleDateString("de-CH")}.`
+      : `Nächste Abrechnung: ${periodEnd.toLocaleDateString("de-CH")}`;
   } else if (sub.trialActive) {
     planEl.textContent = "Kostenlose Testphase";
     sinceEl.textContent = new Date(data.createdAt).toLocaleDateString("de-CH");
@@ -1764,6 +1793,27 @@ async function loadProfile() {
     (r) => Number(r.percent) >= 60
   );
 }
+
+document.getElementById("btn-profile-cancel-subscription").addEventListener("click", async () => {
+  if (!confirm("Möchtest du dein Abo wirklich bei Payrexx kündigen? Der Zugang bleibt bis zum Ende der bezahlten Periode bestehen.")) return;
+  const button = document.getElementById("btn-profile-cancel-subscription");
+  const statusEl = document.getElementById("profile-subscription-action-status");
+  button.disabled = true;
+  statusEl.classList.remove("hidden");
+  statusEl.textContent = "Kündigung wird an Payrexx übermittelt …";
+  const { ok, data } = await api("/api/subscription/cancel", { method: "POST" });
+  button.disabled = false;
+  if (!ok) {
+    statusEl.textContent = data.error || "Das Abo konnte nicht gekündigt werden.";
+    return;
+  }
+  await refreshSubscriptionStatus();
+  await loadProfile();
+  statusEl.classList.remove("hidden");
+  statusEl.textContent = data.currentPeriodEnd
+    ? `Abo gekündigt. Der Zugang bleibt bis ${new Date(data.currentPeriodEnd).toLocaleDateString("de-CH")} bestehen.`
+    : "Abo gekündigt.";
+});
 
 function svgEl(tag, attrs) {
   const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -1991,11 +2041,25 @@ document.getElementById("card-history").addEventListener("click", goToHistory);
 
 // ---------- Login / Logout ----------
 let pendingAfterLogin = null;
+let pendingRegistrationPlan = "free";
 
 function showLoginScreen() {
+  document.getElementById("login-form-panel").classList.remove("hidden");
+  document.getElementById("register-form-panel").classList.add("hidden");
   document.getElementById("login-screen").classList.remove("hidden");
   document.getElementById("app-layout").classList.add("hidden");
   document.getElementById("login-username").focus();
+}
+
+function showRegisterScreen(plan) {
+  pendingRegistrationPlan = plan;
+  document.getElementById("login-error").classList.add("hidden");
+  document.getElementById("register-error").classList.add("hidden");
+  document.getElementById("login-form-panel").classList.add("hidden");
+  document.getElementById("register-form-panel").classList.remove("hidden");
+  document.getElementById("login-screen").classList.remove("hidden");
+  document.getElementById("app-layout").classList.add("hidden");
+  document.getElementById("register-username").focus();
 }
 
 function showApp() {
@@ -2021,6 +2085,57 @@ function requireLogin(afterLogin) {
   return false;
 }
 
+document.getElementById("btn-show-register").addEventListener("click", () => {
+  pendingAfterLogin = null;
+  showRegisterScreen("free");
+});
+
+document.getElementById("btn-show-login").addEventListener("click", () => {
+  document.getElementById("register-form-panel").classList.add("hidden");
+  document.getElementById("login-form-panel").classList.remove("hidden");
+  document.getElementById("login-username").focus();
+});
+
+document.getElementById("btn-register").addEventListener("click", async () => {
+  const username = document.getElementById("register-username").value.trim();
+  const password = document.getElementById("register-password").value;
+  const confirmation = document.getElementById("register-password-confirm").value;
+  const errorEl = document.getElementById("register-error");
+  errorEl.classList.add("hidden");
+  if (password !== confirmation) {
+    errorEl.textContent = "Die Passwörter stimmen nicht überein.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  const { ok, data } = await api("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!ok) {
+    errorEl.textContent = data.error || "Konto konnte nicht erstellt werden.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+  state.token = data.token;
+  state.username = data.username;
+  state.isAdmin = false;
+  localStorage.setItem("matheapp_token", state.token);
+  localStorage.setItem("matheapp_username", state.username);
+  localStorage.setItem("matheapp_isAdmin", "false");
+  document.getElementById("register-password").value = "";
+  document.getElementById("register-password-confirm").value = "";
+  const selectedPlan = pendingRegistrationPlan;
+  pendingRegistrationPlan = "free";
+  pendingAfterLogin = null;
+  await initAppAfterLogin();
+  if (selectedPlan === "monthly") {
+    await startSubscriptionCheckout(document.getElementById("btn-pricing-subscribe"));
+  } else {
+    await goToPricing();
+  }
+});
+
 // Zeigt den Abo-Bildschirm anstelle von Uebung/Pruefung/Ergebnisse, wenn kein aktives Abo
 // (oder laufende Testphase) besteht (der Admin-Account ist ausgenommen, siehe requireSubscription
 // im Server). Fragt den Status jedes Mal frisch beim Server ab statt den zwischengespeicherten
@@ -2041,6 +2156,7 @@ async function requireSubscription(navId) {
 async function refreshSubscriptionStatus() {
   const { ok, data } = await api("/api/subscription/status");
   state.subscriptionActive = ok && Boolean(data.active);
+  state.paidSubscriptionActive = ok && Boolean(data.subscriptionActive);
   renderTrialBanner(ok ? data : null);
 }
 
@@ -2079,8 +2195,18 @@ document.getElementById("btn-subscribe").addEventListener("click", () => {
 });
 
 document.getElementById("btn-pricing-subscribe").addEventListener("click", () => {
-  if (!requireLogin(() => startSubscriptionCheckout(document.getElementById("btn-pricing-subscribe")))) return;
+  if (!state.token || !state.username) {
+    pendingAfterLogin = () => startSubscriptionCheckout(document.getElementById("btn-pricing-subscribe"));
+    showRegisterScreen("monthly");
+    return;
+  }
   startSubscriptionCheckout(document.getElementById("btn-pricing-subscribe"));
+});
+
+document.getElementById("btn-pricing-free").addEventListener("click", () => {
+  if (state.token && state.username) return;
+  pendingAfterLogin = null;
+  showRegisterScreen("free");
 });
 
 // Nach der Rueckkehr von Payrexx (Redirect-URL enthaelt ?subscription=success|failed|cancelled):
@@ -2107,6 +2233,8 @@ function logout() {
   state.username = "";
   state.isAdmin = false;
   state.subscriptionActive = false;
+  state.paidSubscriptionActive = false;
+  state.paidSubscriptionActive = false;
   localStorage.removeItem("matheapp_token");
   localStorage.removeItem("matheapp_username");
   localStorage.removeItem("matheapp_isAdmin");

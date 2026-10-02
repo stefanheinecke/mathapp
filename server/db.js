@@ -73,6 +73,11 @@ export async function initDb() {
   // Datum der ersten erfolgreichen Zahlung (bleibt bei Verlaengerungen unveraendert, im
   // Gegensatz zu current_period_end) - fuers Profil ("Abo seit ...").
   await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS payrexx_subscription_id TEXT;`);
+  await pool.query(
+    `UPDATE subscriptions SET payrexx_subscription_id = payrexx_gateway_id
+     WHERE status = 'active' AND payrexx_subscription_id IS NULL AND payrexx_gateway_id IS NOT NULL`
+  );
 
   await ensureAdminUser();
 }
@@ -196,16 +201,22 @@ export async function awardExerciseBonusStar(playerName, resultId) {
 // erst beim naechsten Webhook auf, nicht sofort am Ende der bezahlten Periode).
 export async function getSubscriptionStatus(username) {
   const { rows } = await pool.query(
-    "SELECT status, current_period_end, started_at FROM subscriptions WHERE username = $1",
+    "SELECT status, current_period_end, started_at, payrexx_subscription_id FROM subscriptions WHERE username = $1",
     [username]
   );
   const row = rows[0];
-  const active = Boolean(row && row.status === "active" && row.current_period_end && new Date(row.current_period_end) > new Date());
+  const active = Boolean(
+    row &&
+      ["active", "cancelled"].includes(row.status) &&
+      row.current_period_end &&
+      new Date(row.current_period_end) > new Date()
+  );
   return {
     active,
     status: row?.status || "inactive",
     currentPeriodEnd: row?.current_period_end || null,
     startedAt: row?.started_at || null,
+    payrexxSubscriptionId: row?.payrexx_subscription_id || null,
   };
 }
 
@@ -225,17 +236,18 @@ export async function upsertPendingSubscription(username, gatewayId) {
 
 // Wird vom Payrexx-Webhook aufgerufen, sobald eine Zahlung (Erst- oder Verlaengerungszahlung
 // des Abos) bestaetigt wurde.
-export async function activateSubscription(username, currentPeriodEnd, gatewayId) {
+export async function activateSubscription(username, currentPeriodEnd, gatewayId, subscriptionId = null) {
   const { rowCount } = await pool.query(
-    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, current_period_end, started_at, updated_at)
-     VALUES ($1, 'active', $2, $3, now(), now())
+    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, payrexx_subscription_id, current_period_end, started_at, updated_at)
+     VALUES ($1, 'active', $2, $4, $3, now(), now())
      ON CONFLICT (username) DO UPDATE SET
        status = 'active',
        payrexx_gateway_id = $2,
+       payrexx_subscription_id = COALESCE($4, subscriptions.payrexx_subscription_id),
        current_period_end = $3,
        started_at = COALESCE(subscriptions.started_at, now()),
        updated_at = now()`,
-    [username, String(gatewayId), currentPeriodEnd]
+    [username, String(gatewayId), currentPeriodEnd, subscriptionId ? String(subscriptionId) : null]
   );
   return rowCount > 0;
 }

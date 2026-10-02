@@ -40,15 +40,32 @@
         <svg class="logo-icon" aria-hidden="true"><use href="#logo-mark"></use></svg>
         <span class="brand-name">Math<span class="brand-accent">Quiz</span></span>
       </div>
-      <h2>Anmelden</h2>
-      <label for="login-username">Benutzername:</label>
-      <input id="login-username" type="text" maxlength="40" autocomplete="username" />
-      <label for="login-password">Passwort:</label>
-      <input id="login-password" type="password" maxlength="200" autocomplete="current-password" />
-      <p id="login-error" class="login-error hidden"></p>
-      <div class="toolbar">
-        <button id="btn-login">Anmelden</button>
-        <button id="btn-login-cancel" type="button">Zurück</button>
+      <div id="login-form-panel">
+        <h2>Anmelden</h2>
+        <label for="login-username">Benutzername:</label>
+        <input id="login-username" type="text" maxlength="40" autocomplete="username" />
+        <label for="login-password">Passwort:</label>
+        <input id="login-password" type="password" maxlength="200" autocomplete="current-password" />
+        <p id="login-error" class="login-error hidden"></p>
+        <div class="toolbar">
+          <button id="btn-login">Anmelden</button>
+          <button id="btn-login-cancel" type="button">Zurück</button>
+        </div>
+        <p class="auth-switch">Noch kein Konto? <button id="btn-show-register" class="text-button" type="button">Registrieren</button></p>
+      </div>
+      <div id="register-form-panel" class="hidden">
+        <h2>Konto erstellen</h2>
+        <label for="register-username">Benutzername:</label>
+        <input id="register-username" type="text" minlength="3" maxlength="40" autocomplete="username" />
+        <label for="register-password">Passwort (mindestens 6 Zeichen):</label>
+        <input id="register-password" type="password" minlength="6" maxlength="200" autocomplete="new-password" />
+        <label for="register-password-confirm">Passwort bestätigen:</label>
+        <input id="register-password-confirm" type="password" minlength="6" maxlength="200" autocomplete="new-password" />
+        <p id="register-error" class="login-error hidden"></p>
+        <div class="toolbar">
+          <button id="btn-register">Konto erstellen</button>
+          <button id="btn-show-login" class="btn-secondary" type="button">Zurück zur Anmeldung</button>
+        </div>
       </div>
     </div>
   </div>
@@ -190,7 +207,7 @@
       <h2>Preise</h2>
       <p>Starte kostenlos und wechsle jederzeit zum Abo – ohne Mindestlaufzeit.</p>
       <div class="pricing-grid">
-        <div class="pricing-card">
+        <div id="pricing-free-card" class="pricing-card">
           <span class="pricing-plan-name">Kostenlos testen</span>
           <span class="pricing-price">CHF 0.- <span>/ 3 Tage</span></span>
           <ul class="pricing-features">
@@ -198,8 +215,9 @@
             <li>KI-Bewertung deiner handschriftlichen Lösungen</li>
             <li>Keine Zahlungsangaben nötig</li>
           </ul>
+          <button id="btn-pricing-free" class="pricing-cta" type="button">Jetzt starten</button>
         </div>
-        <div class="pricing-card featured">
+        <div id="pricing-paid-card" class="pricing-card featured">
           <span class="pricing-plan-name">MathQuiz Abo</span>
           <span class="pricing-price">CHF 1.- <span>/ Monat</span></span>
           <ul class="pricing-features">
@@ -396,6 +414,8 @@
           <p><strong>Beginn:</strong> <span id="profile-plan-since"></span></p>
           <p id="profile-plan-note" class="profile-plan-note"></p>
           <p><strong>⭐ Gesammelte Sterne:</strong> <span id="profile-stars"></span></p>
+          <p id="profile-subscription-action-status" class="profile-plan-note hidden" role="status"></p>
+          <button id="btn-profile-cancel-subscription" class="btn-danger hidden" type="button">Abo kündigen</button>
         </div>
       </div>
 

@@ -25,7 +25,12 @@ import {
   deactivateSubscription,
 } from "./db.js";
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
-import { createSubscriptionGateway, retrieveTransaction, retrieveSubscription } from "./payrexx.js";
+import {
+  createSubscriptionGateway,
+  retrieveTransaction,
+  retrieveSubscription,
+  cancelPayrexxSubscription,
+} from "./payrexx.js";
 import { isTrialActive, getTrialEndsAt } from "./trial.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -222,6 +227,29 @@ async function requireSubscription(req, res, next) {
 }
 
 const USERNAME_RE = /^[A-Za-z0-9_.-]{3,40}$/;
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (typeof username !== "string" || !USERNAME_RE.test(username.trim())) {
+      return res.status(400).json({ error: "Benutzername muss 3-40 Zeichen (Buchstaben/Zahlen/_.-) haben." });
+    }
+    if (typeof password !== "string" || password.length < 6 || password.length > 200) {
+      return res.status(400).json({ error: "Passwort muss mindestens 6 Zeichen lang sein." });
+    }
+    const trimmedUsername = username.trim();
+    if (await findUserByUsername(trimmedUsername)) {
+      return res.status(409).json({ error: "Dieser Benutzername existiert bereits." });
+    }
+    const user = await createUser(trimmedUsername, password);
+    const token = createToken(user.username, false);
+    res.status(201).json({ token, username: user.username, isAdmin: false });
+  } catch (err) {
+    if (err?.code === "23505") return res.status(409).json({ error: "Dieser Benutzername existiert bereits." });
+    console.error(err);
+    res.status(500).json({ error: "Konto konnte nicht erstellt werden.", details: err?.message });
+  }
+});
 
 app.post("/api/auth/login", async (req, res) => {
   try {
@@ -442,6 +470,32 @@ app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/subscription/cancel", requireAuth, async (req, res) => {
+  try {
+    const subscription = await getSubscriptionStatus(req.user.username);
+    if (!subscription.active || subscription.status !== "active" || !subscription.payrexxSubscriptionId) {
+      return res.status(409).json({ error: "Kein kündbares Payrexx-Abo gefunden." });
+    }
+
+    const payrexxSubscription = await retrieveSubscription(subscription.payrexxSubscriptionId);
+    const owner = payrexxSubscription.invoice?.referenceId;
+    if (owner !== req.user.username) {
+      return res.status(409).json({ error: "Das Payrexx-Abo konnte deinem Konto nicht sicher zugeordnet werden." });
+    }
+    if (payrexxSubscription.status !== "active") {
+      await deactivateSubscription(req.user.username, payrexxSubscription.status || "cancelled");
+      return res.json({ ok: true, currentPeriodEnd: subscription.currentPeriodEnd });
+    }
+
+    await cancelPayrexxSubscription(subscription.payrexxSubscriptionId);
+    await deactivateSubscription(req.user.username, "cancelled");
+    res.json({ ok: true, currentPeriodEnd: subscription.currentPeriodEnd });
+  } catch (err) {
+    console.error("Payrexx Kündigung fehlgeschlagen:", err);
+    res.status(502).json({ error: "Das Abo konnte bei Payrexx nicht gekündigt werden.", details: err?.message });
+  }
+});
+
 const PAYREXX_ACTIVE_STATUSES = new Set(["confirmed", "authorized"]);
 const PAYREXX_INACTIVE_STATUSES = new Set(["cancelled", "declined", "error", "chargeback", "refunded", "partially-refunded"]);
 
@@ -478,7 +532,7 @@ app.post("/api/subscription/webhook", async (req, res) => {
         // auf "+1 Monat ab jetzt" zurueckfallen, damit der Zugang nicht faelschlich leer bleibt.
         const periodEnd = subscription.valid_until ? new Date(subscription.valid_until) : new Date();
         if (!subscription.valid_until) periodEnd.setMonth(periodEnd.getMonth() + 1);
-        await activateSubscription(username, periodEnd, subscription.id);
+        await activateSubscription(username, periodEnd, subscription.id, subscription.id);
       } else {
         await deactivateSubscription(username, subscription.status);
       }

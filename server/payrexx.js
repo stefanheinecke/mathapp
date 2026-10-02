@@ -59,3 +59,7 @@ export async function retrieveTransaction(transactionId) {
 export async function retrieveSubscription(subscriptionId) {
   return payrexxRequest("GET", `/Subscription/${encodeURIComponent(subscriptionId)}/`);
 }
+
+export async function cancelPayrexxSubscription(subscriptionId) {
+  return payrexxRequest("DELETE", `/Subscription/${encodeURIComponent(subscriptionId)}/`);
+}
