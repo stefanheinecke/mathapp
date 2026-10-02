@@ -1215,12 +1215,31 @@ document.getElementById("hero-cta-pricing").addEventListener("click", goToPricin
 
 const heroVideo = document.getElementById("hero-video");
 const heroVideoStatus = document.getElementById("hero-video-status");
+const heroVideoFrame = document.getElementById("hero-video-frame");
+document.getElementById("hero-video-preview").addEventListener("click", () => {
+  // Remove the poster overlay immediately so native controls remain available if the
+  // browser declines scripted playback. Calling play() in this tap preserves iOS gesture.
+  heroVideoFrame.classList.add("is-playing");
+  heroVideoStatus.hidden = true;
+  const playRequest = heroVideo.play();
+  if (playRequest && typeof playRequest.catch === "function") {
+    playRequest.catch(() => {
+      heroVideoStatus.textContent = "Tippe auf Play im Videoplayer, um die Wiedergabe zu starten.";
+      heroVideoStatus.hidden = false;
+    });
+  }
+});
+
 heroVideo.addEventListener("error", () => {
   showHeroVideoPlaybackHint("Das Video konnte nicht geladen werden. Bitte prüfe deine Verbindung.");
 });
 
 heroVideo.addEventListener("playing", () => {
   heroVideoStatus.hidden = true;
+});
+
+heroVideo.addEventListener("pause", () => {
+  if (heroVideo.ended) heroVideoFrame.classList.remove("is-playing");
 });
 
 function showHeroVideoPlaybackHint(message) {
