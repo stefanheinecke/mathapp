@@ -2,6 +2,10 @@ import { create, all } from "mathjs";
 
 const math = create(all);
 const KNOWN_CONSTANTS = new Set(["e", "pi", "i", "Infinity", "NaN", "true", "false"]);
+const KNOWN_FUNCTIONS = new Set([
+  "abs", "acos", "acosh", "asin", "asinh", "atan", "atanh", "ceil", "cos", "cosh", "exp",
+  "floor", "log", "log10", "max", "min", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh",
+]);
 const EPSILON = 1e-6;
 
 // Suchbereich fuer die numerische Nullstellensuche. Deckt Schulaufgaben komfortabel ab,
@@ -16,6 +20,15 @@ function splitIntoLines(text) {
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
+}
+
+// In Schulmathematik bedeutet ein OCR-Token wie "ax" normalerweise a*x, nicht einen
+// Variablennamen "ax". Bekannte Funktionsnamen/Konstanten bleiben unangetastet.
+function normalizeAdjacentVariables(expression) {
+  return expression.replace(/\b[a-z]{2,}\b/g, (token) => {
+    if (KNOWN_FUNCTIONS.has(token) || KNOWN_CONSTANTS.has(token)) return token;
+    return [...token].join("*");
+  });
 }
 
 function symbolsOf(node) {
@@ -121,8 +134,8 @@ function analyzeLine(line) {
   const eqIndex = line.indexOf("=");
   if (eqIndex === -1) return null;
 
-  const lhs = line.slice(0, eqIndex);
-  const rhs = line.slice(eqIndex + 1);
+  const lhs = normalizeAdjacentVariables(line.slice(0, eqIndex));
+  const rhs = normalizeAdjacentVariables(line.slice(eqIndex + 1));
 
   let diffNode;
   try {
@@ -143,7 +156,12 @@ function analyzeLine(line) {
   }
 
   if (symbols.size > 1) {
-    return { line, kind: "unsupported" };
+    const result = { line, kind: "unsupported" };
+    // Mehrere Symbole koennen Schulaufgaben mit Parametern sein (z.B. nach x aufloesen).
+    // Das AST bleibt intern, wird nicht in die API-Antwort serialisiert.
+    Object.defineProperty(result, "symbolicDiff", { value: diffNode });
+    Object.defineProperty(result, "symbolicVariables", { value: [...symbols] });
+    return result;
   }
 
   const variable = [...symbols][0];
@@ -151,6 +169,36 @@ function analyzeLine(line) {
   if (roots === null) return { line, kind: "unsupported" };
 
   return { line, kind: "equation", variable, roots: roots.sort((a, b) => a - b) };
+}
+
+// Prueft, ob zwei mehrsymbolige Gleichungen dieselbe Loesungsmenge fuer mindestens eine
+// gemeinsame Variable beschreiben. Die Differenzen duerfen sich dabei nur um einen von dieser
+// Variablen unabhaengigen, nicht-null Parameterfaktor unterscheiden (z.B. Division durch a).
+function areEquivalentParameterizedEquations(previous, current) {
+  if (!previous.symbolicDiff || !current.symbolicDiff) return false;
+  const sharedVariables = previous.symbolicVariables.filter((name) => current.symbolicVariables.includes(name));
+
+  for (const variable of sharedVariables) {
+    try {
+      const previousDerivative = math.derivative(previous.symbolicDiff, variable);
+      const currentDerivative = math.derivative(current.symbolicDiff, variable);
+      if (math.simplify(currentDerivative).toString() === "0") continue;
+
+      const factor = math.simplify(
+        math.parse(`(${previousDerivative.toString()}) / (${currentDerivative.toString()})`)
+      );
+      if (factor.toString() === "0" || symbolsOf(factor).has(variable)) continue;
+
+      const residual = math.simplify(
+        math.parse(`(${previous.symbolicDiff.toString()}) - (${factor.toString()}) * (${current.symbolicDiff.toString()})`)
+      );
+      if (residual.toString() === "0") return true;
+    } catch {
+      // Unbekannte/zu komplexe Algebra bleibt beim Sprachmodell.
+    }
+  }
+
+  return false;
 }
 
 // Prueft eine mehrzeilige Transkription auf innere Konsistenz: widersprechen sich zwei
@@ -161,6 +209,7 @@ export function checkSteps(text) {
   const analyzed = lines.map(analyzeLine).filter(Boolean);
   const problems = [];
   const lastRootsByVar = {};
+  let previousParameterizedEquation = null;
 
   for (const step of analyzed) {
     if (step.kind === "arithmetic" && !step.holds) {
@@ -175,6 +224,15 @@ export function checkSteps(text) {
         );
       }
       lastRootsByVar[step.variable] = step.roots;
+    }
+    if (step.kind === "unsupported" && step.symbolicDiff) {
+      if (
+        previousParameterizedEquation &&
+        !areEquivalentParameterizedEquations(previousParameterizedEquation, step)
+      ) {
+        problems.push(`Widerspruch: "${step.line}" ist keine aequivalente Umformung des vorherigen mehrsymboligen Gleichungsschritts.`);
+      }
+      previousParameterizedEquation = step;
     }
   }
 

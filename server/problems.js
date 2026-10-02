@@ -60,8 +60,8 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-1d",
-    latex: "\\text{Löse die Gleichung nach x auf: } 2y = \\dfrac{ax-1}{3}",
-    answer: "𝑥=(6𝑦+1)a",
+    latex: "\\text{Löse die Gleichung nach x auf: } 2y = \\dfrac{ax-1}{3} \\quad (a \\ne 0)",
+    answer: "x = (6*y + 1)/a, assuming a != 0",
     year: 2026,
     category: "Gleichung",
     points: 1,

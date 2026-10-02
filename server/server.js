@@ -630,7 +630,13 @@ app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => 
             "werden, der Folgeschritt muss also 3x = 15 lauten; 3x = 12 waere falsch, weil 20 - 5 nicht 12 ist).\n" +
             "3. Ein Rechenweg darf von der Musterloesung abweichen (andere gleichwertige Loesungsstrategie), " +
             "aber JEDER einzelne Schritt muss fuer sich mathematisch korrekt sein.\n" +
-            "4. Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann.\n\n" +
+            "4. Bruchstriche und LaTeX-Brueche umfassen den GESAMTEN Zaehler und Nenner: " +
+            "\\frac{6y+1}{a} bedeutet (6y+1)/a und darf niemals als 6y+1/a gelesen werden. " +
+            "Klammerung und Bruchumfang muessen exakt erhalten bleiben.\n" +
+            "5. Wenn nach einer Variablen (z.B. x) aufgeloest wird, behandle andere Buchstaben als " +
+            "Parameter/Konstanten. Pruefe Umformungen algebraisch; beim Dividieren durch einen Parameter " +
+            "gilt die uebliche Voraussetzung, dass dieser ungleich null ist.\n" +
+            "6. Beruecksichtige, dass die OCR-Transkription selbst Lesefehler enthalten kann.\n\n" +
             "Bewerte ZWEI Dinge GETRENNT voneinander:\n" +
             "A) hasCalculationPath: true, wenn mehr zu sehen ist als nur das nackte Endergebnis (also " +
             "mindestens ein Zwischenschritt/Rechenweg erkennbar ist). false, wenn nur das Endergebnis " +

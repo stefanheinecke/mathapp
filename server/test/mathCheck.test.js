@@ -32,6 +32,18 @@ test("unsupported: mehrere Variablen in einer Zeile werden uebersprungen", () =>
   assert.equal(result.analyzed[0].kind, "unsupported");
 });
 
+test("parameter equation: gleichwertiges Isolieren von x mit gemeinsamer Klammer im Zaehler ist korrekt", () => {
+  const result = checkSteps("2y=(ax-1)/3\n6y=ax-1\nx=(6y+1)/a");
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.problems, []);
+});
+
+test("parameter equation: falscher mehrsymboliger Umformungsschritt wird erkannt", () => {
+  const result = checkSteps("2y=(ax-1)/3\n6y=ax-1\nx=6y+1/a");
+  assert.equal(result.ok, false);
+  assert.match(result.problems[0], /Widerspruch/);
+});
+
 test("leerer Text liefert ein leeres, aber gueltiges Ergebnis", () => {
   const result = checkSteps("");
   assert.equal(result.ok, true);
