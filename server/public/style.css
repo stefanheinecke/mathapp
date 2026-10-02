@@ -432,6 +432,17 @@ h1 {
   text-align: center;
 }
 
+.profile-payrexx-management-link {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.profile-payrexx-management-link.hidden {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .hero-grid {
     grid-template-columns: 1fr;

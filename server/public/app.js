@@ -1798,14 +1798,18 @@ async function loadProfile() {
   const sinceEl = document.getElementById("profile-plan-since");
   const noteEl = document.getElementById("profile-plan-note");
   const cancelButton = document.getElementById("btn-profile-cancel-subscription");
+  const payrexxManagementLink = document.getElementById("profile-payrexx-management-link");
   const sub = data.subscription;
   const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
-  const paidAccessActive = periodEnd && periodEnd > new Date() && ["active", "cancelled"].includes(sub.status);
+  const paidAccessActive = periodEnd && periodEnd > new Date() && ["active", "in_notice", "cancelled"].includes(sub.status);
   cancelButton.classList.toggle("hidden", !(sub.status === "active" && paidAccessActive && sub.payrexxSubscriptionId));
+  payrexxManagementLink.href = sub.payrexxGatewayLink || "#";
+  payrexxManagementLink.classList.toggle("hidden", !(sub.status === "active" && sub.payrexxGatewayLink));
   if (paidAccessActive) {
-    planEl.textContent = sub.status === "cancelled" ? "MathQuiz Abo (gekündigt)" : "MathQuiz Abo (CHF 1.-/Monat)";
+    const cancellationPending = ["cancelled", "in_notice"].includes(sub.status);
+    planEl.textContent = cancellationPending ? "MathQuiz Abo (gekündigt)" : "MathQuiz Abo (CHF 1.-/Monat)";
     sinceEl.textContent = sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("de-CH") : "–";
-    noteEl.textContent = sub.status === "cancelled"
+    noteEl.textContent = cancellationPending
       ? `Keine weitere Abbuchung. Zugang bis ${periodEnd.toLocaleDateString("de-CH")}.`
       : `Nächste Abrechnung: ${periodEnd.toLocaleDateString("de-CH")}`;
   } else if (sub.trialActive) {
@@ -1834,24 +1838,16 @@ async function loadProfile() {
 }
 
 document.getElementById("btn-profile-cancel-subscription").addEventListener("click", async () => {
-  if (!confirm("Möchtest du dein Abo wirklich bei Payrexx kündigen? Der Zugang bleibt bis zum Ende der bezahlten Periode bestehen.")) return;
-  const button = document.getElementById("btn-profile-cancel-subscription");
+  if (!confirm("Payrexx verwaltet dieses Abo. Du kannst die automatische Verlängerung im Payrexx-Kundenkonto unter «Abonnemente» → «Stop Renewal» beenden. Möchtest du fortfahren?")) return;
   const statusEl = document.getElementById("profile-subscription-action-status");
-  button.disabled = true;
   statusEl.classList.remove("hidden");
-  statusEl.textContent = "Kündigung wird an Payrexx übermittelt …";
-  const { ok, data } = await api("/api/subscription/cancel", { method: "POST" });
-  button.disabled = false;
-  if (!ok) {
-    statusEl.textContent = data.error || "Das Abo konnte nicht gekündigt werden.";
-    return;
+  const managementLink = document.getElementById("profile-payrexx-management-link");
+  if (managementLink.href && managementLink.href !== window.location.href && !managementLink.classList.contains("hidden")) {
+    statusEl.textContent = "Öffne das Payrexx-Kundenkonto und wähle bei deinem Abo «Stop Renewal».";
+    window.open(managementLink.href, "_blank", "noopener,noreferrer");
+  } else {
+    statusEl.textContent = "Öffne die Payrexx-Bestätigungs-E-Mail zum Abo und melde dich über die darin verlinkte Zahlungsseite im Kundenkonto an. Wähle dort «Abonnemente» → «Stop Renewal».";
   }
-  await refreshSubscriptionStatus();
-  await loadProfile();
-  statusEl.classList.remove("hidden");
-  statusEl.textContent = data.currentPeriodEnd
-    ? `Abo gekündigt. Der Zugang bleibt bis ${new Date(data.currentPeriodEnd).toLocaleDateString("de-CH")} bestehen.`
-    : "Abo gekündigt.";
 });
 
 function svgEl(tag, attrs) {

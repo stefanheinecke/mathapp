@@ -44,6 +44,7 @@ export async function createSubscriptionGateway({ referenceId, successUrl, faile
     subscriptionState: "true",
     subscriptionInterval: "P1M",
     subscriptionPeriod: "P1M",
+    subscriptionCancellationInterval: "P1M",
   });
 }
 
@@ -58,8 +59,4 @@ export async function retrieveTransaction(transactionId) {
 // "subscription"-Webhook-Payload statt eines "transaction"-Payloads.
 export async function retrieveSubscription(subscriptionId) {
   return payrexxRequest("GET", `/Subscription/${encodeURIComponent(subscriptionId)}/`);
-}
-
-export async function cancelPayrexxSubscription(subscriptionId) {
-  return payrexxRequest("DELETE", `/Subscription/${encodeURIComponent(subscriptionId)}/`);
 }

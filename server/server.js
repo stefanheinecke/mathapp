@@ -29,7 +29,6 @@ import {
   createSubscriptionGateway,
   retrieveTransaction,
   retrieveSubscription,
-  cancelPayrexxSubscription,
 } from "./payrexx.js";
 import { isTrialActive, getTrialEndsAt } from "./trial.js";
 
@@ -466,7 +465,7 @@ app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
       failedUrl: `${origin}/?subscription=failed`,
       cancelUrl: `${origin}/?subscription=cancelled`,
     });
-    await upsertPendingSubscription(req.user.username, gateway.id);
+    await upsertPendingSubscription(req.user.username, gateway.id, gateway.link);
     res.json({ link: gateway.link });
   } catch (err) {
     console.error("Payrexx Checkout Fehler:", err);
@@ -475,29 +474,9 @@ app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
 });
 
 app.post("/api/subscription/cancel", requireAuth, async (req, res) => {
-  try {
-    const subscription = await getSubscriptionStatus(req.user.username);
-    if (!subscription.active || subscription.status !== "active" || !subscription.payrexxSubscriptionId) {
-      return res.status(409).json({ error: "Kein kündbares Payrexx-Abo gefunden." });
-    }
-
-    const payrexxSubscription = await retrieveSubscription(subscription.payrexxSubscriptionId);
-    const owner = payrexxSubscription.invoice?.referenceId;
-    if (owner !== req.user.username) {
-      return res.status(409).json({ error: "Das Payrexx-Abo konnte deinem Konto nicht sicher zugeordnet werden." });
-    }
-    if (payrexxSubscription.status !== "active") {
-      await deactivateSubscription(req.user.username, payrexxSubscription.status || "cancelled");
-      return res.json({ ok: true, currentPeriodEnd: subscription.currentPeriodEnd });
-    }
-
-    await cancelPayrexxSubscription(subscription.payrexxSubscriptionId);
-    await deactivateSubscription(req.user.username, "cancelled");
-    res.json({ ok: true, currentPeriodEnd: subscription.currentPeriodEnd });
-  } catch (err) {
-    console.error("Payrexx Kündigung fehlgeschlagen:", err);
-    res.status(502).json({ error: "Das Abo konnte bei Payrexx nicht gekündigt werden.", details: err?.message });
-  }
+  res.status(410).json({
+    error: "Payrexx verwaltete Abos müssen im Payrexx-Kundenkonto über «Stop Renewal» gekündigt werden. So bleibt der Zugang bis zum Ende der bezahlten Periode bestehen.",
+  });
 });
 
 const PAYREXX_ACTIVE_STATUSES = new Set(["confirmed", "authorized"]);
