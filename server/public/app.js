@@ -1841,12 +1841,18 @@ document.getElementById("btn-profile-cancel-subscription").addEventListener("cli
   if (!confirm("Payrexx verwaltet dieses Abo. Du kannst die automatische Verlängerung im Payrexx-Kundenkonto unter «Abonnemente» → «Stop Renewal» beenden. Möchtest du fortfahren?")) return;
   const statusEl = document.getElementById("profile-subscription-action-status");
   statusEl.classList.remove("hidden");
+  statusEl.textContent = "Kündigungswunsch wird protokolliert …";
+  const { ok, data } = await api("/api/subscription/cancel", { method: "POST" });
+  if (!ok || !data.requestRecorded) {
+    statusEl.textContent = data.error || "Kündigungswunsch konnte nicht protokolliert werden.";
+    return;
+  }
   const managementLink = document.getElementById("profile-payrexx-management-link");
   if (managementLink.href && managementLink.href !== window.location.href && !managementLink.classList.contains("hidden")) {
-    statusEl.textContent = "Öffne das Payrexx-Kundenkonto und wähle bei deinem Abo «Stop Renewal».";
+    statusEl.textContent = "Kündigungswunsch gespeichert. Bitte wähle im Payrexx-Kundenkonto bei deinem Abo «Stop Renewal», um die Verlängerung zu beenden.";
     window.open(managementLink.href, "_blank", "noopener,noreferrer");
   } else {
-    statusEl.textContent = "Öffne die Payrexx-Bestätigungs-E-Mail zum Abo und melde dich über die darin verlinkte Zahlungsseite im Kundenkonto an. Wähle dort «Abonnemente» → «Stop Renewal».";
+    statusEl.textContent = "Kündigungswunsch gespeichert. Öffne die Payrexx-Bestätigungs-E-Mail, melde dich über den darin enthaltenen Link an und wähle «Abonnemente» → «Stop Renewal».";
   }
 });
 
@@ -2355,7 +2361,9 @@ async function checkExistingSession() {
   await initAppAfterLogin();
 }
 
-// ---------- Admin: Benutzerverwaltung (nur sichtbar/erreichbar fuer "Stefan") ----------
+// ---------- Admin: Benutzerverwaltung und Abo-Audit-Log ----------
+let adminSubscriptionEventsPage = 1;
+
 function renderAdminUserRow(u) {
   const row = document.createElement("div");
   row.className = "admin-user-row";
@@ -2433,13 +2441,125 @@ async function renderAdminUsers() {
   data.forEach((u) => listEl.appendChild(renderAdminUserRow(u)));
 }
 
+const SUBSCRIPTION_EVENT_LABELS = {
+  cancellation_requested: "Kündigungswunsch",
+  subscription_checkout_started: "Checkout gestartet",
+  subscription_activated: "Abo aktiviert",
+  subscription_renewed: "Abo verlängert",
+  subscription_changed: "Abo geändert",
+  subscription_status_changed: "Status geändert",
+  subscription_deleted: "Abo gelöscht",
+};
+
+function formatSubscriptionEventState(value) {
+  if (!value) return "–";
+  const parts = [value.status || "Status unbekannt"];
+  if (value.currentPeriodEnd) parts.push(`bis ${new Date(value.currentPeriodEnd).toLocaleDateString("de-CH")}`);
+  if (value.gatewayId) parts.push(`Gateway ${value.gatewayId}`);
+  if (value.subscriptionId) parts.push(`Payrexx-Abo ${value.subscriptionId}`);
+  return parts.join(" · ");
+}
+
+function renderSubscriptionEventRow(event) {
+  const row = document.createElement("tr");
+  const cells = [
+    new Date(event.created_at).toLocaleString("de-CH"),
+    event.username,
+    SUBSCRIPTION_EVENT_LABELS[event.event_type] || event.event_type,
+    `${event.actor_username} (${event.source})`,
+  ];
+  cells.forEach((text) => {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    row.appendChild(cell);
+  });
+  const change = document.createElement("td");
+  change.textContent = `${formatSubscriptionEventState(event.old_state)} → ${formatSubscriptionEventState(event.new_state)}`;
+  const detailParts = [];
+  if (event.details?.payrexxStatus) detailParts.push(`Payrexx: ${event.details.payrexxStatus}`);
+  if (event.details?.gatewayId) detailParts.push(`Gateway ${event.details.gatewayId}`);
+  if (event.details?.reason) detailParts.push(event.details.reason);
+  if (event.details?.nextStep) detailParts.push(`Nächster Schritt: ${event.details.nextStep}`);
+  if (detailParts.length) {
+    const detail = document.createElement("small");
+    detail.className = "admin-event-detail";
+    detail.textContent = detailParts.join(" · ");
+    change.appendChild(document.createElement("br"));
+    change.appendChild(detail);
+  }
+  row.appendChild(change);
+  return row;
+}
+
+async function renderSubscriptionEvents() {
+  const container = document.getElementById("admin-subscription-events");
+  const pageStatus = document.getElementById("admin-events-page-status");
+  const previousButton = document.getElementById("btn-admin-events-previous");
+  const nextButton = document.getElementById("btn-admin-events-next");
+  container.textContent = "Lade Ereignisse …";
+  const { ok, data } = await api(`/api/admin/subscription-events?page=${adminSubscriptionEventsPage}`);
+  if (!ok || !Array.isArray(data.events)) {
+    container.textContent = data.error || "Abo-Ereignisse konnten nicht geladen werden.";
+    pageStatus.textContent = "";
+    previousButton.disabled = true;
+    nextButton.disabled = true;
+    return;
+  }
+
+  container.replaceChildren();
+  const table = document.createElement("table");
+  table.className = "admin-events-table";
+  const header = document.createElement("tr");
+  ["Zeitpunkt", "Benutzer", "Ereignis", "Ausgelöst von", "Änderung / Details"].forEach((label) => {
+    const cell = document.createElement("th");
+    cell.textContent = label;
+    header.appendChild(cell);
+  });
+  const thead = document.createElement("thead");
+  thead.appendChild(header);
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  if (data.events.length) {
+    data.events.forEach((event) => tbody.appendChild(renderSubscriptionEventRow(event)));
+  } else {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 5;
+    cell.textContent = "Noch keine Abo-Ereignisse vorhanden.";
+    row.appendChild(cell);
+    tbody.appendChild(row);
+  }
+  table.appendChild(tbody);
+  const wrapper = document.createElement("div");
+  wrapper.className = "admin-events-table-scroll";
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+
+  const totalPages = Math.max(1, data.totalPages);
+  adminSubscriptionEventsPage = Math.min(data.page, totalPages);
+  pageStatus.textContent = `Seite ${adminSubscriptionEventsPage} von ${totalPages} · ${data.total} Ereignisse`;
+  previousButton.disabled = adminSubscriptionEventsPage <= 1;
+  nextButton.disabled = adminSubscriptionEventsPage >= totalPages;
+}
+
+document.getElementById("btn-admin-events-previous").addEventListener("click", async () => {
+  if (adminSubscriptionEventsPage <= 1) return;
+  adminSubscriptionEventsPage -= 1;
+  await renderSubscriptionEvents();
+});
+
+document.getElementById("btn-admin-events-next").addEventListener("click", async () => {
+  adminSubscriptionEventsPage += 1;
+  await renderSubscriptionEvents();
+});
+
 async function goToAdmin() {
   if (!requireLogin(goToAdmin)) return;
   if (!state.isAdmin) return;
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-admin");
   showScreen("screen-admin");
-  await renderAdminUsers();
+  await Promise.all([renderAdminUsers(), renderSubscriptionEvents()]);
 }
 
 document.getElementById("nav-admin").addEventListener("click", goToAdmin);

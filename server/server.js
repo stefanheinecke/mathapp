@@ -23,6 +23,8 @@ import {
   upsertPendingSubscription,
   activateSubscription,
   deactivateSubscription,
+  recordSubscriptionCancellationRequest,
+  listSubscriptionEvents,
 } from "./db.js";
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
 import {
@@ -371,6 +373,16 @@ app.get("/api/admin/users", requireAuth, requireAdmin, async (_req, res) => {
   }
 });
 
+app.get("/api/admin/subscription-events", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const page = Number.parseInt(req.query.page, 10) || 1;
+    res.json(await listSubscriptionEvents(page, 10));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Abo-Ereignisse konnten nicht geladen werden.", details: err?.message });
+  }
+});
+
 app.post("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -417,7 +429,7 @@ app.delete("/api/admin/users/:username", requireAuth, requireAdmin, async (req, 
     if (req.params.username === req.user.username) {
       return res.status(400).json({ error: "Du kannst deinen eigenen Account nicht loeschen." });
     }
-    const ok = await deleteUser(req.params.username);
+    const ok = await deleteUser(req.params.username, req.user.username);
     if (!ok) return res.status(404).json({ error: "Unbekannter Benutzer." });
     res.json({ ok: true });
   } catch (err) {
@@ -474,9 +486,13 @@ app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
 });
 
 app.post("/api/subscription/cancel", requireAuth, async (req, res) => {
-  res.status(410).json({
-    error: "Payrexx verwaltete Abos müssen im Payrexx-Kundenkonto über «Stop Renewal» gekündigt werden. So bleibt der Zugang bis zum Ende der bezahlten Periode bestehen.",
-  });
+  try {
+    await recordSubscriptionCancellationRequest(req.user.username);
+    res.status(202).json({ requestRecorded: true });
+  } catch (err) {
+    console.error("Abo-Kuendigungswunsch konnte nicht protokolliert werden:", err);
+    res.status(500).json({ error: "Kündigungswunsch konnte nicht protokolliert werden." });
+  }
 });
 
 const PAYREXX_ACTIVE_STATUSES = new Set(["confirmed", "authorized"]);

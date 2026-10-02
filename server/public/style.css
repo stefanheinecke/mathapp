@@ -102,6 +102,59 @@ body {
   margin-top: 0.25rem;
 }
 
+.admin-events-container {
+  margin-top: 0.75rem;
+}
+
+.admin-events-table-scroll {
+  overflow-x: auto;
+  border: 1px solid #dde1ee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-events-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.admin-events-table th,
+.admin-events-table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.9rem;
+}
+
+.admin-events-table th {
+  background: #f7f8fc;
+  white-space: nowrap;
+}
+
+.admin-event-detail {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: #666;
+}
+
+.admin-events-pagination {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-events-pagination span {
+  min-width: 13rem;
+  text-align: center;
+  color: #555;
+}
+
+.admin-events-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .auth-switch {
   margin: 1rem 0 0;
   color: #555;

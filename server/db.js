@@ -81,6 +81,23 @@ export async function initDb() {
      WHERE status = 'active' AND payrexx_subscription_id IS NULL AND payrexx_gateway_id IS NOT NULL`
   );
 
+  // Append-only Audit-Log: bewusst ohne Fremdschluessel auf users/subscriptions, damit Ereignisse
+  // auch nach einer Kontoloeschung fuer den Admin nachvollziehbar bleiben.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS subscription_events (
+      id BIGSERIAL PRIMARY KEY,
+      username TEXT NOT NULL,
+      actor_username TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      old_state JSONB,
+      new_state JSONB,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS subscription_events_created_idx ON subscription_events (created_at DESC, id DESC);`);
+
   await ensureAdminUser();
 }
 
@@ -144,9 +161,35 @@ export async function updateProfile(username, { firstName, lastName, email }) {
   return rows[0] || null;
 }
 
-export async function deleteUser(username) {
-  const { rowCount } = await pool.query("DELETE FROM users WHERE username = $1", [username]);
-  return rowCount > 0;
+export async function deleteUser(username, actorUsername = "admin") {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows: subscriptionRows } = await client.query(
+      `SELECT status, payrexx_gateway_id, payrexx_subscription_id, current_period_end
+       FROM subscriptions WHERE username = $1 FOR UPDATE`,
+      [username]
+    );
+    if (subscriptionRows[0]) {
+      await insertSubscriptionEvent(client, {
+        username,
+        actorUsername,
+        eventType: "subscription_deleted",
+        source: "admin_user_delete",
+        oldState: subscriptionState(subscriptionRows[0]),
+        newState: null,
+        details: { reason: "The user account was deleted by an administrator." },
+      });
+    }
+    const { rowCount } = await client.query("DELETE FROM users WHERE username = $1", [username]);
+    await client.query("COMMIT");
+    return rowCount > 0;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // Speichert einen abgeschlossenen Lauf (ein Uebungs-Ergebnis oder eine ganze Pruefung).
@@ -226,44 +269,208 @@ export async function isSubscriptionActive(username) {
   return (await getSubscriptionStatus(username)).active;
 }
 
-// Wird beim Erzeugen eines neuen Payrexx-Gateways aufgerufen, bevor der Nutzer bezahlt hat.
-export async function upsertPendingSubscription(username, gatewayId, gatewayLink = null) {
-  await pool.query(
-    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, payrexx_gateway_link, updated_at)
-     VALUES ($1, 'pending', $2, $3, now())
-     ON CONFLICT (username) DO UPDATE SET
-       status = 'pending',
-       payrexx_gateway_id = $2,
-       payrexx_gateway_link = $3,
-       updated_at = now()`,
-    [username, String(gatewayId), gatewayLink || null]
-  );
-}
-
-// Wird vom Payrexx-Webhook aufgerufen, sobald eine Zahlung (Erst- oder Verlaengerungszahlung
-// des Abos) bestaetigt wurde.
-export async function activateSubscription(username, currentPeriodEnd, gatewayId, subscriptionId = null) {
-  const { rowCount } = await pool.query(
-    `INSERT INTO subscriptions (username, status, payrexx_gateway_id, payrexx_subscription_id, current_period_end, started_at, updated_at)
-     VALUES ($1, 'active', $2, $4, $3, now(), now())
-     ON CONFLICT (username) DO UPDATE SET
-       status = 'active',
-       payrexx_gateway_id = $2,
-       payrexx_subscription_id = COALESCE($4, subscriptions.payrexx_subscription_id),
-       current_period_end = $3,
-       started_at = COALESCE(subscriptions.started_at, now()),
-       updated_at = now()`,
-    [username, String(gatewayId), currentPeriodEnd, subscriptionId ? String(subscriptionId) : null]
-  );
-  return rowCount > 0;
-}
-
 // Wird vom Payrexx-Webhook aufgerufen bei Kuendigung/Fehlschlag/Rueckbuchung einer Zahlung.
 export async function deactivateSubscription(username, status = "inactive") {
-  const { rowCount } = await pool.query(
-    `UPDATE subscriptions SET status = $2, updated_at = now() WHERE username = $1`,
-    [username, status]
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT status, payrexx_gateway_id, payrexx_subscription_id, current_period_end
+       FROM subscriptions WHERE username = $1 FOR UPDATE`,
+      [username]
+    );
+    const previous = rows[0];
+    if (!previous) {
+      await client.query("COMMIT");
+      return false;
+    }
+    const oldState = subscriptionState(previous);
+    if (previous.status === status) {
+      await client.query("COMMIT");
+      return true;
+    }
+    const { rows: updatedRows } = await client.query(
+      `UPDATE subscriptions SET status = $2, updated_at = now() WHERE username = $1
+       RETURNING status, payrexx_gateway_id, payrexx_subscription_id, current_period_end`,
+      [username, status]
+    );
+    await insertSubscriptionEvent(client, {
+      username,
+      actorUsername: "Payrexx",
+      eventType: "subscription_status_changed",
+      source: "payrexx_webhook",
+      oldState,
+      newState: subscriptionState(updatedRows[0]),
+      details: { payrexxStatus: status },
+    });
+    await client.query("COMMIT");
+    return true;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+function subscriptionState(row) {
+  if (!row) return null;
+  return {
+    status: row.status,
+    gatewayId: row.payrexx_gateway_id || null,
+    subscriptionId: row.payrexx_subscription_id || null,
+    currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end).toISOString() : null,
+  };
+}
+
+async function insertSubscriptionEvent(client, {
+  username,
+  actorUsername,
+  eventType,
+  source,
+  oldState = null,
+  newState = null,
+  details = {},
+}) {
+  await client.query(
+    `INSERT INTO subscription_events (username, actor_username, event_type, source, old_state, new_state, details)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb)`,
+    [
+      username,
+      actorUsername,
+      eventType,
+      source,
+      oldState === null ? null : JSON.stringify(oldState),
+      newState === null ? null : JSON.stringify(newState),
+      JSON.stringify(details),
+    ]
   );
-  return rowCount > 0;
+}
+
+// Wird beim Start eines Checkouts und nicht erst bei der ersten Abbuchung protokolliert.
+export async function upsertPendingSubscription(username, gatewayId, gatewayLink = null) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT status, payrexx_gateway_id, payrexx_subscription_id, current_period_end
+       FROM subscriptions WHERE username = $1 FOR UPDATE`,
+      [username]
+    );
+    const oldState = subscriptionState(rows[0]);
+    const { rows: updatedRows } = await client.query(
+      `INSERT INTO subscriptions (username, status, payrexx_gateway_id, payrexx_gateway_link, updated_at)
+       VALUES ($1, 'pending', $2, $3, now())
+       ON CONFLICT (username) DO UPDATE SET
+         status = 'pending',
+         payrexx_gateway_id = $2,
+         payrexx_gateway_link = $3,
+         updated_at = now()
+       RETURNING status, payrexx_gateway_id, payrexx_subscription_id, current_period_end`,
+      [username, String(gatewayId), gatewayLink || null]
+    );
+    await insertSubscriptionEvent(client, {
+      username,
+      actorUsername: username,
+      eventType: "subscription_checkout_started",
+      source: "user_action",
+      oldState,
+      newState: subscriptionState(updatedRows[0]),
+      details: { gatewayId: String(gatewayId) },
+    });
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Protokolliert einen expliziten Klick auf "Abo kuendigen". Das Stoppen der Verlaengerung
+// selbst bestaetigt Payrexx und wird separat durch dessen Webhook als Statuswechsel erfasst.
+export async function recordSubscriptionCancellationRequest(username) {
+  const { rows } = await pool.query(
+    `SELECT status, payrexx_gateway_id, payrexx_subscription_id, current_period_end
+     FROM subscriptions WHERE username = $1`,
+    [username]
+  );
+  await pool.query(
+    `INSERT INTO subscription_events (username, actor_username, event_type, source, old_state, new_state, details)
+     VALUES ($1, $1, 'cancellation_requested', 'user_action', $2::jsonb, $2::jsonb, $3::jsonb)`,
+    [
+      username,
+      rows[0] ? JSON.stringify(subscriptionState(rows[0])) : null,
+      JSON.stringify({ requestedVia: "profile", nextStep: "Payrexx Stop Renewal confirmation" }),
+    ]
+  );
+}
+
+export async function listSubscriptionEvents(page = 1, pageSize = 10) {
+  const safePage = Math.max(1, Math.floor(Number(page) || 1));
+  const safePageSize = Math.max(1, Math.min(10, Math.floor(Number(pageSize) || 10)));
+  const offset = (safePage - 1) * safePageSize;
+  const [{ rows: events }, { rows: countRows }] = await Promise.all([
+    pool.query(
+      `SELECT id, username, actor_username, event_type, source, old_state, new_state, details, created_at
+       FROM subscription_events ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2`,
+      [safePageSize, offset]
+    ),
+    pool.query("SELECT COUNT(*)::int AS total FROM subscription_events"),
+  ]);
+  const total = countRows[0].total;
+  return { events, total, page: safePage, pageSize: safePageSize, totalPages: Math.ceil(total / safePageSize) };
+}
+
+export async function activateSubscription(username, currentPeriodEnd, gatewayId, subscriptionId = null) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT status, payrexx_gateway_id, payrexx_subscription_id, current_period_end
+       FROM subscriptions WHERE username = $1 FOR UPDATE`,
+      [username]
+    );
+    const oldState = subscriptionState(rows[0]);
+    const { rows: updatedRows } = await client.query(
+      `INSERT INTO subscriptions (username, status, payrexx_gateway_id, payrexx_subscription_id, current_period_end, started_at, updated_at)
+       VALUES ($1, 'active', $2, $4, $3, now(), now())
+       ON CONFLICT (username) DO UPDATE SET
+         status = 'active',
+         payrexx_gateway_id = $2,
+         payrexx_subscription_id = COALESCE($4, subscriptions.payrexx_subscription_id),
+         current_period_end = $3,
+         started_at = COALESCE(subscriptions.started_at, now()),
+         updated_at = now()
+       RETURNING status, payrexx_gateway_id, payrexx_subscription_id, current_period_end`,
+      [username, String(gatewayId), currentPeriodEnd, subscriptionId ? String(subscriptionId) : null]
+    );
+    const newState = subscriptionState(updatedRows[0]);
+    const eventType = !oldState || oldState.status !== "active"
+      ? "subscription_activated"
+      : oldState.currentPeriodEnd !== newState.currentPeriodEnd
+        ? "subscription_renewed"
+        : oldState.gatewayId !== newState.gatewayId || oldState.subscriptionId !== newState.subscriptionId
+          ? "subscription_changed"
+          : null;
+    if (eventType) {
+      await insertSubscriptionEvent(client, {
+        username,
+        actorUsername: "Payrexx",
+        eventType,
+        source: "payrexx_webhook",
+        oldState,
+        newState,
+        details: { gatewayId: String(gatewayId) },
+      });
+    }
+    await client.query("COMMIT");
+    return true;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
