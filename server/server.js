@@ -164,6 +164,10 @@ app.get("/", (_req, res) => {
   res.type("html").send(html.replace("<body>", "<body>\n  <script>window.AUTH_BYPASS = true;</script>"));
 });
 
+app.get("/MathQuiz_Video.mp4", (_req, res) => {
+  res.sendFile(path.join(__dirname, "..", "MathQuiz_Video.mp4"));
+});
+
 // "no-cache" statt eines maxAge erzwingt eine Revalidierung (ETag/Last-Modified) bei jedem
 // Laden, damit Browser nach einem Deploy nie unbemerkt ein veraltetes app.js/style.css aus dem
 // Heuristik-Cache weiterverwenden (das hat bereits zu TypeErrors durch laengst entfernte

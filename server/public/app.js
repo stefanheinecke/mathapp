@@ -1213,6 +1213,28 @@ document.getElementById("brand-home").addEventListener("click", goToStart);
 document.getElementById("hero-cta-uebung").addEventListener("click", goToUebung);
 document.getElementById("hero-cta-pricing").addEventListener("click", goToPricing);
 
+const heroVideoFrame = document.getElementById("hero-video-frame");
+const heroVideo = document.getElementById("hero-video");
+document.getElementById("hero-video-preview").addEventListener("click", async () => {
+  heroVideoFrame.classList.add("is-playing");
+  heroVideo.load();
+  try {
+    await heroVideo.play();
+  } catch {
+    restoreHeroVideoPreview();
+  }
+});
+
+heroVideo.addEventListener("error", () => {
+  restoreHeroVideoPreview();
+});
+
+function restoreHeroVideoPreview() {
+  if (!heroVideoFrame.classList.contains("is-playing")) return;
+  heroVideo.pause();
+  heroVideoFrame.classList.remove("is-playing");
+}
+
 // ---------- Mobile-Menue (Hamburger) ----------
 const hamburgerBtn = document.getElementById("hamburger");
 const navLinksEl = document.getElementById("nav-links");
