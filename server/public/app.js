@@ -1215,24 +1215,30 @@ document.getElementById("hero-cta-pricing").addEventListener("click", goToPricin
 
 const heroVideoFrame = document.getElementById("hero-video-frame");
 const heroVideo = document.getElementById("hero-video");
-document.getElementById("hero-video-preview").addEventListener("click", async () => {
+const heroVideoStatus = document.getElementById("hero-video-status");
+document.getElementById("hero-video-preview").addEventListener("click", () => {
   heroVideoFrame.classList.add("is-playing");
-  heroVideo.load();
-  try {
-    await heroVideo.play();
-  } catch {
-    restoreHeroVideoPreview();
+  heroVideoStatus.hidden = true;
+  // Call play() directly in the click event: mobile Safari may reject playback if the
+  // user-activation gesture is lost by an intervening load()/await.
+  const playRequest = heroVideo.play();
+  if (playRequest && typeof playRequest.catch === "function") {
+    playRequest.catch(() => showHeroVideoPlaybackHint());
   }
 });
 
 heroVideo.addEventListener("error", () => {
-  restoreHeroVideoPreview();
+  showHeroVideoPlaybackHint("Das Video konnte nicht geladen werden. Bitte prüfe deine Verbindung und tippe auf Play.");
 });
 
-function restoreHeroVideoPreview() {
-  if (!heroVideoFrame.classList.contains("is-playing")) return;
-  heroVideo.pause();
-  heroVideoFrame.classList.remove("is-playing");
+heroVideo.addEventListener("playing", () => {
+  heroVideoStatus.hidden = true;
+});
+
+function showHeroVideoPlaybackHint(message = "Tippe auf Play im Videoplayer, um die Wiedergabe zu starten.") {
+  heroVideoFrame.classList.add("is-playing");
+  heroVideoStatus.textContent = message;
+  heroVideoStatus.hidden = false;
 }
 
 // ---------- Mobile-Menue (Hamburger) ----------

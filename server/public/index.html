@@ -116,7 +116,7 @@
         </div>
         <div class="hero-visual">
           <div id="hero-video-frame" class="hero-video-frame">
-            <video id="hero-video" class="hero-video" controls controlsList="nofullscreen" disablePictureInPicture disableRemotePlayback playsinline preload="none" aria-label="MathQuiz Video">
+            <video id="hero-video" class="hero-video" controls controlsList="nofullscreen" disablePictureInPicture disableRemotePlayback playsinline webkit-playsinline preload="metadata" aria-label="MathQuiz Video">
               <source src="/MathQuiz_Video.mp4" type="video/mp4" />
               Dein Browser unterstützt die Videowiedergabe nicht.
             </video>
@@ -127,6 +127,7 @@
               </span>
             </button>
           </div>
+          <p id="hero-video-status" class="hero-video-status" role="status" aria-live="polite" hidden></p>
           <p id="stars-total" class="stars-total hidden"></p>
           <div id="level-info" class="level-info hidden">
             <p id="level-title" class="level-title"></p>
