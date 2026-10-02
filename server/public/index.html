@@ -210,6 +210,20 @@
     <section id="screen-subscribe" class="screen hidden">
       <h2>Abo erforderlich</h2>
       <p>Für Übungsmodus, Prüfungsmodus und Ergebnisse benötigst du ein Abo für CHF 1.-/Monat.</p>
+      <div id="subscription-billing-details" class="subscription-billing-details hidden">
+        <h3>Angaben für dein Abonnement</h3>
+        <p>Bitte ergänze Vorname, Nachname und E-Mail-Adresse, bevor du zur Zahlung weitergehst.</p>
+        <label for="subscription-first-name">Vorname</label>
+        <input id="subscription-first-name" type="text" maxlength="100" autocomplete="given-name" required />
+        <label for="subscription-last-name">Nachname</label>
+        <input id="subscription-last-name" type="text" maxlength="100" autocomplete="family-name" required />
+        <label for="subscription-email">E-Mail-Adresse</label>
+        <input id="subscription-email" type="email" maxlength="200" autocomplete="email" required />
+        <p id="subscription-billing-error" class="login-error hidden" role="alert"></p>
+        <div class="toolbar">
+          <button id="btn-subscription-save-billing" type="button">Weiter zur Zahlung</button>
+        </div>
+      </div>
       <div class="toolbar">
         <button id="btn-subscribe">Jetzt abonnieren (CHF 1.-/Monat)</button>
       </div>

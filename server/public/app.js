@@ -2219,8 +2219,42 @@ function renderTrialBanner(data) {
 // Bildschirm (Uebung/Pruefung/Ergebnisse ohne Abo) und vom "Jetzt starten"-Knopf auf der
 // Preise-Seite.
 async function startSubscriptionCheckout(btn, statusEl) {
+  if (!state.token || !state.username) {
+    if (statusEl) statusEl.textContent = "Bitte melde dich zuerst an.";
+    else showLoginScreen();
+    return;
+  }
+
   btn.disabled = true;
   if (statusEl) statusEl.textContent = "Zahlung wird vorbereitet ...";
+  const profileResponse = await api("/api/profile");
+  if (!profileResponse.ok) {
+    const message = profileResponse.data.error || "Profil konnte nicht geladen werden.";
+    if (statusEl) statusEl.textContent = message;
+    else alert(message);
+    btn.disabled = false;
+    return;
+  }
+
+  const profile = profileResponse.data;
+  const missingBillingDetails =
+    !profile.firstName?.trim() ||
+    !profile.lastName?.trim() ||
+    !profile.email?.trim() ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim());
+  if (missingBillingDetails) {
+    document.getElementById("subscription-first-name").value = profile.firstName || "";
+    document.getElementById("subscription-last-name").value = profile.lastName || "";
+    document.getElementById("subscription-email").value = profile.email || "";
+    document.getElementById("subscription-billing-error").classList.add("hidden");
+    document.getElementById("subscription-billing-details").classList.remove("hidden");
+    if (statusEl) statusEl.textContent = "";
+    showScreen("screen-subscribe");
+    setActiveNav("nav-pricing");
+    btn.disabled = false;
+    return;
+  }
+
   const { ok, data } = await api("/api/subscription/checkout", { method: "POST" });
   if (!ok) {
     if (statusEl) statusEl.textContent = data.error || "Zahlung konnte nicht gestartet werden.";
@@ -2230,6 +2264,42 @@ async function startSubscriptionCheckout(btn, statusEl) {
   }
   window.location.href = data.link;
 }
+
+document.getElementById("btn-subscription-save-billing").addEventListener("click", async () => {
+  const firstNameInput = document.getElementById("subscription-first-name");
+  const lastNameInput = document.getElementById("subscription-last-name");
+  const emailInput = document.getElementById("subscription-email");
+  const errorEl = document.getElementById("subscription-billing-error");
+  errorEl.classList.add("hidden");
+
+  const firstName = firstNameInput.value.trim();
+  const lastName = lastNameInput.value.trim();
+  const email = emailInput.value.trim();
+  if (!firstName || !lastName || !email || !emailInput.validity.valid) {
+    errorEl.textContent = "Bitte Vorname, Nachname und eine gültige E-Mail-Adresse eingeben.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+
+  const saveButton = document.getElementById("btn-subscription-save-billing");
+  saveButton.disabled = true;
+  const { ok, data } = await api("/api/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ firstName, lastName, email }),
+  });
+  if (!ok) {
+    errorEl.textContent = data.error || "Angaben konnten nicht gespeichert werden.";
+    errorEl.classList.remove("hidden");
+    saveButton.disabled = false;
+    return;
+  }
+
+  document.getElementById("subscription-billing-details").classList.add("hidden");
+  const checkoutButton = document.getElementById("btn-subscribe");
+  await startSubscriptionCheckout(checkoutButton, document.getElementById("subscribe-status"));
+  saveButton.disabled = false;
+});
 
 document.getElementById("btn-subscribe").addEventListener("click", () => {
   startSubscriptionCheckout(document.getElementById("btn-subscribe"), document.getElementById("subscribe-status"));

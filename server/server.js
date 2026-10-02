@@ -470,6 +470,13 @@ app.get("/api/subscription/status", requireAuth, async (req, res) => {
 // Zeile in "subscriptions" ohne Zusatztabelle wiederfinden.
 app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
   try {
+    const user = await findUserByUsername(req.user.username);
+    if (!user?.first_name?.trim() || !user?.last_name?.trim() || !user?.email?.trim() || !EMAIL_RE.test(user.email.trim())) {
+      return res.status(400).json({
+        error: "Bitte hinterlege vor dem Abo Vorname, Nachname und eine gültige E-Mail-Adresse in deinem Profil.",
+        billingDetailsRequired: true,
+      });
+    }
     const origin = `${req.protocol}://${req.get("host")}`;
     const gateway = await createSubscriptionGateway({
       referenceId: req.user.username,
