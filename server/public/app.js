@@ -321,6 +321,12 @@ function commitLiveStroke() {
 }
 
 function startDraw(evt) {
+  if (drawing || evt.isPrimary === false) return;
+  if (evt.button !== undefined && evt.button !== 0) return;
+  evt.preventDefault();
+  if (typeof liveCanvas.setPointerCapture === "function" && evt.pointerId !== undefined) {
+    liveCanvas.setPointerCapture(evt.pointerId);
+  }
   drawing = true;
   const pos = getPos(evt);
   // "destination-out" macht die uebermalten Pixel transparent statt sie einzufaerben - so
@@ -340,6 +346,7 @@ function startDraw(evt) {
 
 function draw(evt) {
   if (!drawing) return;
+  evt.preventDefault();
   const pos = getPos(evt);
   if (currentTool === "eraser") {
     ctx.beginPath();
@@ -370,10 +377,15 @@ function stopDraw(evt) {
   } else {
     scheduleLivePreview();
   }
+  if (evt?.pointerId !== undefined && typeof liveCanvas.hasPointerCapture === "function" && liveCanvas.hasPointerCapture(evt.pointerId)) {
+    liveCanvas.releasePointerCapture(evt.pointerId);
+  }
 }
 
-liveCanvas.addEventListener("pointerdown", startDraw);
-liveCanvas.addEventListener("pointermove", draw);
+liveCanvas.addEventListener("pointerdown", startDraw, { passive: false });
+liveCanvas.addEventListener("pointermove", draw, { passive: false });
+liveCanvas.addEventListener("pointerup", stopDraw);
+liveCanvas.addEventListener("pointercancel", stopDraw);
 window.addEventListener("pointerup", stopDraw);
 
 function clearCanvas() {
@@ -389,8 +401,8 @@ document.getElementById("clear-btn").addEventListener("click", clearCanvas);
 
 // ---------- Erweiterbare Zeichenflaeche ----------
 // Reicht der Standardplatz nicht, kann die Canvas per Knopf schrittweise verlaengert werden;
-// ein umgebender scrollbarer Rahmen (#notebook-scroll) verhindert, dass Werkzeugleiste und
-// Abgeben-Knopf dabei aus dem sichtbaren Bereich rutschen.
+// der scrollbare Rahmen begrenzt das Canvas-Scrolling, waehrend die Aufgabenwerkzeuge oberhalb
+// der Aufgabenstellung erreichbar bleiben.
 const CANVAS_DEFAULT_HEIGHT = 500;
 const CANVAS_GROW_STEP = 300;
 const CANVAS_MAX_HEIGHT = 2600;
@@ -547,6 +559,7 @@ if (isNativeIOS()) {
   document.getElementById("tool-pen").classList.add("hidden");
   document.getElementById("tool-eraser").classList.add("hidden");
   document.getElementById("clear-btn").classList.add("hidden");
+  document.getElementById("pencilkit-controls").classList.remove("hidden");
   document.getElementById("pencilkit-wrap").classList.remove("hidden");
 }
 

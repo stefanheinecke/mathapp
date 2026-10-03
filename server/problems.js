@@ -12,7 +12,10 @@ const RAW_PROBLEMS = [
   {
     id: "2026-1a1",
     latex: "\\text{Vereinfache die Terme soweit wie möglich: } \\dfrac{3x}{4}\\cdot\\dfrac{2}{9}:\\dfrac{x}{2}",
-    answer: "x = 1/3",
+    answer: "1/3 (für x ≠ 0)",
+    gradingCriteria:
+      "Die Aufgabe verlangt das Vereinfachen des Terms (3x/4) · (2/9) : (x/2), nicht das Loesen einer Gleichung nach x. " +
+      "Das Endergebnis 1/3 ist korrekt; x kuerzt sich heraus. Der urspruengliche Term ist fuer x = 0 nicht definiert.",
     year: 2026,
     category: "Gleichung",
     points: 1,
@@ -25,7 +28,11 @@ const RAW_PROBLEMS = [
   {
     id: "2026-1a2",
     latex: "\\text{Vereinfache die Terme soweit wie möglich: } 8xy - 6x^2y : (3x)",
-    answer: "6𝑥𝑦",
+    answer: "6xy",
+    gradingCriteria:
+      "Division bindet vor der Subtraktion: 8xy - (6x^2y)/(3x). Dabei kuerzt sich x^2/x zu x, " +
+      "also ist (6x^2y)/(3x) = 2xy und der Term wird 8xy - 2xy = 6xy. " +
+      "Die Umformung 8xy - 2xy ist korrekt und darf nicht als 8xy - 2x^2y bewertet werden.",
     year: 2026,
     category: "Termumformung",
     points: 1,
@@ -38,7 +45,11 @@ const RAW_PROBLEMS = [
   {
     id: "2026-1b",
     latex: "\\text{Dividiere die 2. Potenz von } 12 \\text{ durch die 3. Potenz von } 2.",
-    answer: "18",
+    answer: "36a^2 - a (für a ≥ 0)",
+    gradingCriteria:
+      "Die Wurzeln √(64a^2), √(3a) und √(27a) sind fuer reelle Werte nur gemeinsam fuer a ≥ 0 definiert. " +
+      "Daher gilt √(64a^2) = 8a und √(3a)·√(27a) = √(81a^2) = 9a. Ausserdem ist (−6a)^2 = 36a^2. " +
+      "Somit: 8a + 36a^2 − 9a = 36a^2 − a. Dieser Rechenweg und dieses Endergebnis sind korrekt.",
     year: 2026,
     category: "Termumformung",
     points: 1,
@@ -191,7 +202,7 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-3b",
-    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √64a^2+(−6a)^2−√3a\\cdot√27a",
+    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √(64a^2+(−6a)^2)−√3a\\cdot√27a",
     answer: "a",
     year: 2026,
     category: "Gleichung",

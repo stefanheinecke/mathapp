@@ -33,6 +33,11 @@ import {
   retrieveSubscription,
 } from "./payrexx.js";
 import { isTrialActive, getTrialEndsAt } from "./trial.js";
+import {
+  hasCorrect2026_1a2Derivation,
+  hasCorrect2026_3bDerivation,
+  hasFinalFractionResult,
+} from "./grading.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -682,7 +687,9 @@ app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => 
         {
           role: "user",
           content:
-            `Aufgabe: ${problem.text}\nMusterloesung: ${problem.answer}\n\n` +
+            `Aufgabe: ${problem.text}\nMusterloesung: ${problem.answer}\n` +
+            (problem.gradingCriteria ? `Besondere Bewertungshinweise: ${problem.gradingCriteria}\n` : "") +
+            "\n" +
             `OCR-Klartext der Handschrift: ${recognized.text || "(leer)"}\n` +
             `OCR-LaTeX der Handschrift: ${recognized.latex || "(leer)"}\n\n` +
             (deterministic.problems.length > 0
@@ -704,11 +711,24 @@ app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => 
     const steps = Array.isArray(result.steps) ? result.steps : [];
     const hasInvalidStep = steps.some((s) => s && s.valid === false);
     const hasPath = Boolean(result.hasCalculationPath);
-    const resultCorrect = Boolean(result.resultCorrect);
+    const verified2026_1a2Derivation =
+      problem.id === "2026-1a2" && hasCorrect2026_1a2Derivation(recognized) && deterministic.ok;
+    const verified2026_3bDerivation =
+      problem.id === "2026-3b" && hasCorrect2026_3bDerivation(recognized) && deterministic.ok;
+    // Bei dieser Termvereinfachung ist 1/3 die direkte Musterloesung. OCR/LLM koennen das
+    // faelschlich als fehlendes Ergebnis werten, wenn sie die Musterloesung "x = 1/3" als
+    // Gleichung lesen. Ein explizit notiertes Endergebnis 1/3 ist daher deterministisch korrekt.
+    const resultCorrect = Boolean(result.resultCorrect) ||
+      (problem.id === "2026-1a1" && hasFinalFractionResult(recognized, 1, 3)) ||
+      verified2026_1a2Derivation ||
+      verified2026_3bDerivation;
     // Serverseitiges Sicherheitsnetz: ein als falsch erkannter Schritt (LLM) oder ein deterministisch
     // nachgerechneter Widerspruch (mathjs) macht den Rechenweg immer falsch, unabhaengig davon, was das
     // Modell im "pathCorrect"-Feld behauptet.
-    const pathCorrect = hasPath && Boolean(result.pathCorrect) && !hasInvalidStep && deterministic.ok;
+    const pathCorrect =
+      (hasPath || verified2026_1a2Derivation || verified2026_3bDerivation) &&
+      ((Boolean(result.pathCorrect) && !hasInvalidStep) || verified2026_1a2Derivation || verified2026_3bDerivation) &&
+      deterministic.ok;
 
     // Punktevergabe: volle Punktzahl, sobald das Endergebnis korrekt ist (unabhaengig davon, ob
     // ueberhaupt ein Rechenweg gezeigt wurde) - AUSSER der gezeigte Rechenweg enthaelt nachweislich
@@ -716,7 +736,12 @@ app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => 
     // Ist das Endergebnis falsch/fehlt, aber der gezeigte Rechenweg ist fuer sich korrekt, gibt es
     // einen halben Punkt fuer den richtigen Ansatz.
     const points = typeof problem.points === "number" ? problem.points : 1;
-    const pathState = !hasPath ? "missing" : pathCorrect ? "correct" : "incorrect";
+    const pathState =
+      !(hasPath || verified2026_1a2Derivation || verified2026_3bDerivation)
+        ? "missing"
+        : pathCorrect
+          ? "correct"
+          : "incorrect";
     let awarded;
     if (pathState === "incorrect") {
       awarded = 0;
@@ -742,7 +767,11 @@ app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => 
     if (hintsUsed) {
       notes.push("Du hast Hinweise verwendet, deshalb gibt es fuer diese Aufgabe 0 Punkte.");
     }
-    const feedback = notes.length > 0 ? `${result.feedback ?? ""} (${notes.join(" ")})`.trim() : result.feedback ?? "";
+    const verifiedFeedback = verified2026_3bDerivation
+      ? "Richtig: √(3a)·√(27a) = 9a und 8a + 36a² − 9a = 36a² − a (für a ≥ 0)."
+      : null;
+    const feedbackBase = verifiedFeedback ?? result.feedback ?? "";
+    const feedback = notes.length > 0 ? `${feedbackBase} (${notes.join(" ")})`.trim() : feedbackBase;
 
     res.json({
       transcription: result.transcription || recognized.text,

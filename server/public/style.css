@@ -589,6 +589,10 @@ h1 {
   margin-top: 1rem;
 }
 
+.task-controls {
+  margin-bottom: 0.75rem;
+}
+
 /* Scrollbarer Rahmen um die Canvas-Ebenen: die Zeichenflaeche kann per "Mehr Platz"-Knopf
    ueber die Standardhoehe hinaus wachsen (fuer laengere Loesungswege), ohne dass Werkzeugleiste
    und Abgeben-Knopf aus dem sichtbaren Bereich rutschen - stattdessen scrollt nur dieser Rahmen. */
@@ -606,6 +610,10 @@ h1 {
 .notebook-stack {
   position: relative;
   max-width: 800px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .notebook-stack canvas {
@@ -629,6 +637,9 @@ h1 {
   top: 0;
   left: 0;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   cursor: crosshair;
 }
 
@@ -674,9 +685,14 @@ button {
 }
 
 #submit-btn {
+  margin-left: auto;
   background: linear-gradient(135deg, var(--ink), var(--accent));
   color: #fff;
   border-color: var(--ink);
+}
+
+#exam-submit-btn {
+  margin-left: auto;
 }
 
 #submit-btn:hover {
