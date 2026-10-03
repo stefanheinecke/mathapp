@@ -1353,6 +1353,7 @@ document.getElementById("btn-pruefung-start").addEventListener("click", async ()
 // ---------- Gemeinsamer Aufgaben-Ablauf ----------
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
+const canvasPanel = document.getElementById("canvas-panel");
 const submitBtn = document.getElementById("submit-btn");
 const nextBtn = document.getElementById("btn-next");
 const hintPanel = document.getElementById("hint-panel");
@@ -1440,6 +1441,8 @@ function loadCurrentTask() {
     restoreCanvasFromImage(answer.image);
   }
   resultEl.classList.add("hidden");
+  resultEl.open = false;
+  canvasPanel.open = true;
   hintPanel.open = false;
   statusEl.textContent = "";
 
@@ -1565,6 +1568,8 @@ submitBtn.addEventListener("click", async () => {
     }
     document.getElementById("result-feedback").textContent = data.feedback || "";
     resultEl.classList.remove("hidden");
+    canvasPanel.open = false;
+    resultEl.open = true;
     statusEl.textContent = "";
 
     const resultEntry = {
@@ -1613,7 +1618,6 @@ submitBtn.addEventListener("click", async () => {
     }
     submitBtn.classList.add("hidden");
     nextBtn.classList.remove("hidden");
-    requestAnimationFrame(() => resultEl.scrollIntoView({ behavior: "smooth", block: "start" }));
   } catch (err) {
     statusEl.textContent = `Fehler: ${err.message}`;
   } finally {

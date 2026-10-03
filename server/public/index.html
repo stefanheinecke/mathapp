@@ -340,32 +340,45 @@
         <div id="hint-box" class="hint-list"></div>
       </details>
 
-      <section class="canvas-wrap">
-        <div id="notebook-scroll" class="notebook-scroll">
-          <div id="notebook-stack" class="notebook-stack">
-            <canvas id="notebook" width="800" height="500"></canvas>
-            <canvas id="notebook-live" width="800" height="500"></canvas>
-          </div>
+      <details id="canvas-panel" class="canvas-panel" open>
+        <summary class="canvas-panel-summary">
+          <span>Deine Lösung und Zeichenfläche</span>
+          <span class="disclosure-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="canvas-panel-content">
+          <section class="canvas-wrap">
+            <div id="notebook-scroll" class="notebook-scroll">
+              <div id="notebook-stack" class="notebook-stack">
+                <canvas id="notebook" width="800" height="500"></canvas>
+                <canvas id="notebook-live" width="800" height="500"></canvas>
+              </div>
+            </div>
+            <!-- Nur auf iOS (Capacitor) sichtbar: PencilKit ersetzt hier den HTML-Canvas -->
+            <div id="pencilkit-wrap" class="pencilkit-wrap hidden">
+              <img id="pencilkit-preview" class="pencilkit-preview hidden" alt="Vorschau der Handschrift" />
+            </div>
+          </section>
+          <p id="live-preview" class="live-preview hidden">
+            <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
+          </p>
         </div>
-        <!-- Nur auf iOS (Capacitor) sichtbar: PencilKit ersetzt hier den HTML-Canvas -->
-        <div id="pencilkit-wrap" class="pencilkit-wrap hidden">
-          <img id="pencilkit-preview" class="pencilkit-preview hidden" alt="Vorschau der Handschrift" />
-        </div>
-      </section>
-      <p id="live-preview" class="live-preview hidden">
-        <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
-      </p>
+      </details>
 
-      <section id="result" class="result hidden">
-        <h2>Ergebnis</h2>
-        <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
-        <p><strong>Deine Lösung (erkannt):</strong></p>
-        <div id="result-latex-rendered"></div>
-        <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
-        <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
-        <button id="btn-play-bonus-game" class="hint-btn hidden">🎮 Bonus-Spiel spielen (+1 ⭐)</button>
-        <button id="btn-next" class="task-action-btn" type="button">Weiter</button>
-      </section>
+      <details id="result" class="result hidden">
+        <summary class="result-summary">
+          <h2>Ergebnisbewertung</h2>
+          <span class="disclosure-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="result-content">
+          <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
+          <p><strong>Deine Lösung (erkannt):</strong></p>
+          <div id="result-latex-rendered"></div>
+          <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
+          <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
+          <button id="btn-play-bonus-game" class="hint-btn hidden">🎮 Bonus-Spiel spielen (+1 ⭐)</button>
+          <button id="btn-next" class="task-action-btn" type="button">Weiter</button>
+        </div>
+      </details>
 
       <p id="status" class="status"></p>
     </section>
