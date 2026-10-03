@@ -45,11 +45,7 @@ const RAW_PROBLEMS = [
   {
     id: "2026-1b",
     latex: "\\text{Dividiere die 2. Potenz von } 12 \\text{ durch die 3. Potenz von } 2.",
-    answer: "36a^2 - a (für a ≥ 0)",
-    gradingCriteria:
-      "Die Wurzeln √(64a^2), √(3a) und √(27a) sind fuer reelle Werte nur gemeinsam fuer a ≥ 0 definiert. " +
-      "Daher gilt √(64a^2) = 8a und √(3a)·√(27a) = √(81a^2) = 9a. Ausserdem ist (−6a)^2 = 36a^2. " +
-      "Somit: 8a + 36a^2 − 9a = 36a^2 − a. Dieser Rechenweg und dieses Endergebnis sind korrekt.",
+    answer: "18",
     year: 2026,
     category: "Termumformung",
     points: 1,
@@ -202,8 +198,12 @@ const RAW_PROBLEMS = [
   },
   {
     id: "2026-3b",
-    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √(64a^2+(−6a)^2)−√3a\\cdot√27a",
-    answer: "a",
+    latex: "\\text{Vereinfache die Terme so weit wie möglich: }  √(64a^2)+(−6a)^2−√3a\\cdot√27a",
+    answer: "36a^2 - a",
+    gradingCriteria:
+      "Die Wurzeln √(64a^2), √(3a) und √(27a) sind fuer reelle Werte nur gemeinsam fuer a ≥ 0 definiert. " +
+      "Daher gilt √(64a^2) = 8a und √(3a)·√(27a) = √(81a^2) = 9a. Ausserdem ist (−6a)^2 = 36a^2. " +
+      "Somit: 8a + 36a^2 − 9a = 36a^2 − a. Dieser Rechenweg und dieses Endergebnis sind korrekt.",
     year: 2026,
     category: "Gleichung",
     points: 2,
@@ -296,7 +296,7 @@ const RAW_PROBLEMS = [
     {
     id: "2026-7a",
     latex: "\\text{Samira und Nora spielen Basketball.\n\nSamira trifft den Korb erfahrungsgemäss in zwei von drei Würfen.\n\nNora trifft den Korb erfahrungsgemäss in drei von fünf Würfen.\n\nBeide dürfen je einen Freiwurf werfen. Berechne die Wahrscheinlichkeit, dass mindestens jemand von den beiden den Korb trifft.}",
-    answer: "13/15 = 0.86 ≈ 86.7%",
+    answer: "13/15 = 0.87 ≈ 86.7%",
     year: 2026,
     category: "Textaufgabe",
     points: 2,
