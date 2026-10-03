@@ -1360,9 +1360,9 @@ const hintPanel = document.getElementById("hint-panel");
 const hintBox = document.getElementById("hint-box");
 const hintSummaryText = document.getElementById("hint-summary-text");
 
-function renderRevealedHints(hints) {
+function renderRevealedHints(hints, statusMessage = "") {
   hintBox.replaceChildren();
-  if (hints.length === 0) {
+  if (hints.length === 0 && !statusMessage) {
     const emptyMessage = document.createElement("p");
     emptyMessage.className = "hint-list-item hint-list-empty";
     emptyMessage.textContent = "Tippe auf „Hinweis“, um dir Hilfestellungen anzeigen zu lassen.";
@@ -1374,6 +1374,12 @@ function renderRevealedHints(hints) {
     item.textContent = hint;
     hintBox.appendChild(item);
   });
+  if (statusMessage) {
+    const statusItem = document.createElement("p");
+    statusItem.className = "hint-list-item hint-list-empty";
+    statusItem.textContent = statusMessage;
+    hintBox.appendChild(statusItem);
+  }
   hintSummaryText.textContent = hints.length
     ? `${hints.length} ${hints.length === 1 ? "Hinweis" : "Hinweise"} anzeigen`
     : "Hinweise";
@@ -1485,18 +1491,20 @@ document.getElementById("hint-btn").addEventListener("click", async () => {
 
   hintPanel.classList.remove("hidden");
   hintPanel.open = true;
-  const loadingMessage = document.createElement("p");
-  loadingMessage.className = "hint-list-item hint-list-empty";
-  loadingMessage.textContent = "Hinweis wird geladen …";
-  hintBox.replaceChildren(loadingMessage);
+  hintBtn.disabled = true;
+  const requestedIndex = state.nextHintIndex;
+  const requestedTaskIndex = state.currentIndex;
+  renderRevealedHints(state.currentHints, "Hinweis wird geladen …");
 
   const { ok, data } = await api(
-    `/api/hint?problemId=${encodeURIComponent(problem.id)}&index=${state.nextHintIndex}`
+    `/api/hint?problemId=${encodeURIComponent(problem.id)}&index=${requestedIndex}`
   );
+  if (state.currentIndex !== requestedTaskIndex) return;
+
   if (!ok) {
-    state.currentHints.push(`Fehler: ${data.error || "Hinweis konnte nicht geladen werden."}`);
-    renderRevealedHints(state.currentHints);
+    renderRevealedHints(state.currentHints, `Fehler: ${data.error || "Hinweis konnte nicht geladen werden."}`);
     hintPanel.open = true;
+    hintBtn.disabled = false;
     return;
   }
 
@@ -1510,6 +1518,7 @@ document.getElementById("hint-btn").addEventListener("click", async () => {
 
   if (data.hasMore) {
     state.nextHintIndex = data.hintIndex + 1;
+    hintBtn.disabled = false;
   } else {
     hintBtn.disabled = true;
     hintBtn.querySelector(".task-control-label").textContent = "Keine weiteren Hinweise";
