@@ -120,7 +120,7 @@ const RAW_PROBLEMS = [
     ],  },
     {
     id: "2026-1h",
-    latex: "\\text{Das Volumen der Pyramide beträgt 7296 m^3. Berechne die Höhe h: }",
+    latex: "\\text{Das Volumen der Pyramide beträgt} 7296 m^3. \\text{Berechne die Höhe h: }",
     images: ["/images/problem-2026-1h.png"],
     answer: "h = 38 = 38m",
     year: 2026,
