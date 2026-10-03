@@ -715,6 +715,7 @@ const state = {
   scope: null, // problemId (uebung) oder Jahr/Kategorie (pruefung)
   queue: [],
   currentIndex: 0,
+  currentHints: [],
   results: [], // { problemId, points, awarded, fullyCorrect }
   runSaved: false,
   savedResultId: null,
@@ -1354,11 +1355,22 @@ const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const submitBtn = document.getElementById("submit-btn");
 const nextBtn = document.getElementById("btn-next");
-const taskFeedbackPanel = document.getElementById("task-feedback-panel");
-const taskFeedbackSummary = document.getElementById("task-feedback-summary-text");
+const hintPanel = document.getElementById("hint-panel");
+const hintBox = document.getElementById("hint-box");
+const hintSummaryText = document.getElementById("hint-summary-text");
 
-function setTaskFeedbackSummary(text) {
-  taskFeedbackSummary.textContent = text;
+function renderRevealedHints(hints) {
+  hintBox.replaceChildren();
+  hints.forEach((hint) => {
+    const item = document.createElement("p");
+    item.className = "hint-list-item";
+    item.textContent = hint;
+    hintBox.appendChild(item);
+  });
+  hintPanel.classList.toggle("hidden", hints.length === 0);
+  hintSummaryText.textContent = hints.length
+    ? `${hints.length} ${hints.length === 1 ? "Hinweis" : "Hinweise"} anzeigen`
+    : "Hinweise anzeigen";
 }
 
 function startTaskFlow(queue) {
@@ -1423,8 +1435,7 @@ function loadCurrentTask() {
     restoreCanvasFromImage(answer.image);
   }
   resultEl.classList.add("hidden");
-  taskFeedbackPanel.open = false;
-  setTaskFeedbackSummary("Vorschau und Hinweise");
+  hintPanel.open = false;
   statusEl.textContent = "";
 
   // Uebungsmodus: Abgeben wertet sofort aus. Pruefungsmodus: Navigation + eine Gesamt-Abgabe
@@ -1440,6 +1451,7 @@ function loadCurrentTask() {
 
   state.nextHintIndex = answer?.nextHintIndex ?? 0;
   state.hintsUsedForCurrent = answer?.hintsUsed ?? false;
+  state.currentHints = [...(answer?.revealedHints ?? [])];
   const hintBtn = document.getElementById("hint-btn");
   // problem.hints wird vom Server nicht mitgeschickt (bleibt geheim) - deshalb den Ausschoepfungs-
   // Stand explizit merken (siehe hint-btn-Handler), statt ihn hier aus problem.hints herzuleiten.
@@ -1448,16 +1460,8 @@ function loadCurrentTask() {
   hintBtn.querySelector(".task-control-label").textContent = hintsExhausted ? "Keine weiteren Hinweise" : "Hinweis";
   hintBtn.title = hintsExhausted ? "Keine weiteren Hinweise verfügbar" : "Hinweis anzeigen (kostet die Punkte dieser Aufgabe)";
   hintBtn.setAttribute("aria-label", hintBtn.title);
-  const hintBox = document.getElementById("hint-box");
-  if (answer?.revealedHints?.length > 0) {
-    hintBox.textContent = answer.revealedHints[answer.revealedHints.length - 1];
-    hintBox.classList.remove("hidden");
-    taskFeedbackPanel.open = true;
-    setTaskFeedbackSummary("Hinweis anzeigen / ausblenden");
-  } else {
-    hintBox.textContent = "";
-    hintBox.classList.add("hidden");
-  }
+  renderRevealedHints(state.currentHints);
+  hintPanel.open = state.currentHints.length > 0;
 
   const bonusBtn = document.getElementById("btn-play-bonus-game");
   bonusBtn.classList.add("hidden");
@@ -1469,23 +1473,24 @@ function loadCurrentTask() {
 document.getElementById("hint-btn").addEventListener("click", async () => {
   const problem = state.queue[state.currentIndex];
   const hintBtn = document.getElementById("hint-btn");
-  const hintBox = document.getElementById("hint-box");
 
   const { ok, data } = await api(
     `/api/hint?problemId=${encodeURIComponent(problem.id)}&index=${state.nextHintIndex}`
   );
   if (!ok) {
-    hintBox.textContent = `Fehler: ${data.error || "Hinweis konnte nicht geladen werden."}`;
-    hintBox.classList.remove("hidden");
-    taskFeedbackPanel.open = true;
+    state.currentHints.push(`Fehler: ${data.error || "Hinweis konnte nicht geladen werden."}`);
+    renderRevealedHints(state.currentHints);
+    hintPanel.open = true;
     return;
   }
 
   state.hintsUsedForCurrent = true;
-  hintBox.textContent = data.totalHints > 0 ? `Hinweis ${data.hintIndex + 1}/${data.totalHints}: ${data.hint}` : data.hint;
-  hintBox.classList.remove("hidden");
-  taskFeedbackPanel.open = true;
-  setTaskFeedbackSummary("Hinweis anzeigen / ausblenden");
+  const revealedHint = data.totalHints > 0
+    ? `Hinweis ${data.hintIndex + 1}/${data.totalHints}: ${data.hint}`
+    : data.hint;
+  state.currentHints.push(revealedHint);
+  renderRevealedHints(state.currentHints);
+  hintPanel.open = true;
 
   if (data.hasMore) {
     state.nextHintIndex = data.hintIndex + 1;
@@ -1502,7 +1507,7 @@ document.getElementById("hint-btn").addEventListener("click", async () => {
     answer.hintsUsed = true;
     answer.nextHintIndex = state.nextHintIndex;
     answer.hintsExhausted = !data.hasMore;
-    answer.revealedHints.push(hintBox.textContent);
+    answer.revealedHints = [...state.currentHints];
   }
 });
 
@@ -1547,11 +1552,6 @@ submitBtn.addEventListener("click", async () => {
     }
     document.getElementById("result-feedback").textContent = data.feedback || "";
     resultEl.classList.remove("hidden");
-    taskFeedbackPanel.open = false;
-    setTaskFeedbackSummary(
-      `${data.correct ? "Richtig" : data.awarded > 0 ? "Teilweise richtig" : "Nicht korrekt"} · ${data.awarded} / ${data.points} Punkte · Details antippen`
-    );
-    requestAnimationFrame(() => taskFeedbackPanel.querySelector("summary").scrollIntoView({ behavior: "smooth", block: "nearest" }));
     statusEl.textContent = "";
 
     const resultEntry = {
@@ -1600,6 +1600,7 @@ submitBtn.addEventListener("click", async () => {
     }
     submitBtn.classList.add("hidden");
     nextBtn.classList.remove("hidden");
+    requestAnimationFrame(() => resultEl.scrollIntoView({ behavior: "smooth", block: "start" }));
   } catch (err) {
     statusEl.textContent = `Fehler: ${err.message}`;
   } finally {

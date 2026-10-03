@@ -310,7 +310,6 @@
           <button id="clear-btn" class="task-action-btn" type="button" title="Alles löschen" aria-label="Alles löschen"><span aria-hidden="true">🗑️</span><span class="task-control-label">Löschen</span></button>
           <button id="more-space-btn" class="task-action-btn" type="button" title="Mehr Platz zum Schreiben hinzufügen" aria-label="Mehr Platz"><span aria-hidden="true">↕️</span><span class="task-control-label">Mehr Platz</span></button>
           <button id="submit-btn" class="task-action-btn" type="button" title="Lösung abgeben" aria-label="Lösung abgeben"><span aria-hidden="true">✅</span><span class="task-control-label">Abgeben</span></button>
-          <button id="btn-next" class="task-action-btn hidden" type="button" title="Nächste Aufgabe" aria-label="Nächste Aufgabe"><span class="task-control-label">Weiter</span><span aria-hidden="true">▶</span></button>
           <button id="hint-btn" class="hint-btn task-action-btn" type="button" title="Hinweis anzeigen (kostet die Punkte dieser Aufgabe)" aria-label="Hinweis anzeigen"><span aria-hidden="true">💡</span><span class="task-control-label">Hinweis</span></button>
         </div>
         <!-- Nur im Pruefungsmodus sichtbar: freies Vor-/Zurueckblaettern statt Abgeben pro Aufgabe -->
@@ -332,6 +331,15 @@
       <p id="problem-text" class="problem-text"></p>
       <div id="problem-images" class="problem-images"></div>
 
+      <details id="hint-panel" class="task-hint-panel hidden">
+        <summary class="task-hint-summary">
+          <span aria-hidden="true">💡</span>
+          <span id="hint-summary-text">Hinweise anzeigen</span>
+          <span class="task-hint-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div id="hint-box" class="hint-list"></div>
+      </details>
+
       <section class="canvas-wrap">
         <div id="notebook-scroll" class="notebook-scroll">
           <div id="notebook-stack" class="notebook-stack">
@@ -344,28 +352,20 @@
           <img id="pencilkit-preview" class="pencilkit-preview hidden" alt="Vorschau der Handschrift" />
         </div>
       </section>
+      <p id="live-preview" class="live-preview hidden">
+        <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
+      </p>
 
-      <details id="task-feedback-panel" class="task-feedback-panel">
-        <summary class="task-feedback-summary">
-          <span class="task-feedback-summary-icon" aria-hidden="true">▾</span>
-          <span id="task-feedback-summary-text" aria-live="polite">Vorschau und Hinweise</span>
-        </summary>
-        <div class="task-feedback-content">
-          <p id="live-preview" class="live-preview hidden">
-            <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
-          </p>
-          <p id="hint-box" class="hint-box hidden"></p>
-          <section id="result" class="result hidden">
-            <h2>Ergebnis</h2>
-            <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
-            <p><strong>Deine Lösung (erkannt):</strong></p>
-            <div id="result-latex-rendered"></div>
-            <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
-            <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
-            <button id="btn-play-bonus-game" class="hint-btn hidden">🎮 Bonus-Spiel spielen (+1 ⭐)</button>
-          </section>
-        </div>
-      </details>
+      <section id="result" class="result hidden">
+        <h2>Ergebnis</h2>
+        <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
+        <p><strong>Deine Lösung (erkannt):</strong></p>
+        <div id="result-latex-rendered"></div>
+        <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
+        <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
+        <button id="btn-play-bonus-game" class="hint-btn hidden">🎮 Bonus-Spiel spielen (+1 ⭐)</button>
+        <button id="btn-next" class="task-action-btn" type="button">Weiter</button>
+      </section>
 
       <p id="status" class="status"></p>
     </section>
