@@ -305,27 +305,28 @@
       <p id="task-progress" class="task-progress hidden"></p>
       <div class="task-controls">
         <div class="toolbar">
-          <button id="tool-pen" class="tool-btn active" type="button">✏️ Stift</button>
-          <button id="tool-eraser" class="tool-btn" type="button">🧽 Radierer</button>
-          <button id="clear-btn" type="button">Alles löschen</button>
-          <button id="more-space-btn" type="button" title="Mehr Platz zum Schreiben hinzufügen">➕ Mehr Platz</button>
-          <button id="submit-btn" type="button">Abgeben</button>
-          <button id="hint-btn" class="hint-btn" type="button" title="Hinweis anzeigen (kostet die Punkte dieser Aufgabe)">💡 Hinweis</button>
+          <button id="tool-pen" class="tool-btn task-action-btn active" type="button" title="Stift" aria-label="Stift"><span aria-hidden="true">✏️</span><span class="task-control-label">Stift</span></button>
+          <button id="tool-eraser" class="tool-btn task-action-btn" type="button" title="Radierer" aria-label="Radierer"><span aria-hidden="true">🧽</span><span class="task-control-label">Radierer</span></button>
+          <button id="clear-btn" class="task-action-btn" type="button" title="Alles löschen" aria-label="Alles löschen"><span aria-hidden="true">🗑️</span><span class="task-control-label">Löschen</span></button>
+          <button id="more-space-btn" class="task-action-btn" type="button" title="Mehr Platz zum Schreiben hinzufügen" aria-label="Mehr Platz"><span aria-hidden="true">↕️</span><span class="task-control-label">Mehr Platz</span></button>
+          <button id="submit-btn" class="task-action-btn" type="button" title="Lösung abgeben" aria-label="Lösung abgeben"><span aria-hidden="true">✅</span><span class="task-control-label">Abgeben</span></button>
+          <button id="btn-next" class="task-action-btn hidden" type="button" title="Nächste Aufgabe" aria-label="Nächste Aufgabe"><span class="task-control-label">Weiter</span><span aria-hidden="true">▶</span></button>
+          <button id="hint-btn" class="hint-btn task-action-btn" type="button" title="Hinweis anzeigen (kostet die Punkte dieser Aufgabe)" aria-label="Hinweis anzeigen"><span aria-hidden="true">💡</span><span class="task-control-label">Hinweis</span></button>
         </div>
         <!-- Nur im Pruefungsmodus sichtbar: freies Vor-/Zurueckblaettern statt Abgeben pro Aufgabe -->
         <div id="exam-nav" class="toolbar hidden">
-          <button id="exam-prev-btn" type="button">◀ Zurück</button>
-          <button id="exam-next-btn" type="button">Weiter ▶</button>
-          <button id="exam-submit-btn" class="exam-submit-btn" type="button">✅ Prüfung abgeben</button>
+          <button id="exam-prev-btn" class="task-action-btn" type="button" title="Vorherige Aufgabe" aria-label="Vorherige Aufgabe"><span aria-hidden="true">◀</span><span class="task-control-label">Zurück</span></button>
+          <button id="exam-next-btn" class="task-action-btn" type="button" title="Nächste Aufgabe" aria-label="Nächste Aufgabe"><span class="task-control-label">Weiter</span><span aria-hidden="true">▶</span></button>
+          <button id="exam-submit-btn" class="exam-submit-btn task-action-btn" type="button" title="Prüfung abgeben" aria-label="Prüfung abgeben"><span aria-hidden="true">✅</span><span class="task-control-label">Prüfung abgeben</span></button>
         </div>
         <!-- Nur bei Geometrie-Aufgaben sichtbar: Linie/Rechteck/Dreieck mit fest definierten Massen -->
         <div id="shape-tools" class="toolbar hidden">
-          <button id="tool-line" class="tool-btn" type="button" title="Gerade Linie mit fester Länge einfügen">📏 Linie</button>
-          <button id="tool-rectangle" class="tool-btn" type="button" title="Rechteck mit festen Massen einfügen">▭ Rechteck</button>
-          <button id="tool-triangle" class="tool-btn" type="button" title="Dreieck mit festen Seitenlängen einfügen">△ Dreieck</button>
+          <button id="tool-line" class="tool-btn task-action-btn" type="button" title="Gerade Linie mit fester Länge einfügen" aria-label="Linie"><span aria-hidden="true">📏</span><span class="task-control-label">Linie</span></button>
+          <button id="tool-rectangle" class="tool-btn task-action-btn" type="button" title="Rechteck mit festen Massen einfügen" aria-label="Rechteck"><span aria-hidden="true">▭</span><span class="task-control-label">Rechteck</span></button>
+          <button id="tool-triangle" class="tool-btn task-action-btn" type="button" title="Dreieck mit festen Seitenlängen einfügen" aria-label="Dreieck"><span aria-hidden="true">△</span><span class="task-control-label">Dreieck</span></button>
         </div>
         <div id="pencilkit-controls" class="toolbar hidden">
-          <button id="pencilkit-open-btn" class="hint-btn" type="button">✍️ Lösung mit Stift schreiben</button>
+          <button id="pencilkit-open-btn" class="hint-btn task-action-btn" type="button" aria-label="Lösung mit Stift schreiben"><span aria-hidden="true">✍️</span><span class="task-control-label">Lösung schreiben</span></button>
         </div>
       </div>
       <p id="problem-text" class="problem-text"></p>
@@ -342,22 +343,29 @@
         <div id="pencilkit-wrap" class="pencilkit-wrap hidden">
           <img id="pencilkit-preview" class="pencilkit-preview hidden" alt="Vorschau der Handschrift" />
         </div>
-        <p id="live-preview" class="live-preview hidden">
-          <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
-        </p>
-        <p id="hint-box" class="hint-box hidden"></p>
       </section>
 
-      <section id="result" class="result hidden">
-        <h2>Ergebnis</h2>
-        <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
-        <p><strong>Deine Lösung (erkannt):</strong></p>
-        <div id="result-latex-rendered"></div>
-        <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
-        <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
-        <button id="btn-play-bonus-game" class="hint-btn hidden">🎮 Bonus-Spiel spielen (+1 ⭐)</button>
-        <button id="btn-next">Weiter</button>
-      </section>
+      <details id="task-feedback-panel" class="task-feedback-panel">
+        <summary class="task-feedback-summary">
+          <span class="task-feedback-summary-icon" aria-hidden="true">▾</span>
+          <span id="task-feedback-summary-text" aria-live="polite">Vorschau und Hinweise</span>
+        </summary>
+        <div class="task-feedback-content">
+          <p id="live-preview" class="live-preview hidden">
+            <strong>Live-Vorschau (MathPix):</strong> <span id="live-preview-content"></span>
+          </p>
+          <p id="hint-box" class="hint-box hidden"></p>
+          <section id="result" class="result hidden">
+            <h2>Ergebnis</h2>
+            <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
+            <p><strong>Deine Lösung (erkannt):</strong></p>
+            <div id="result-latex-rendered"></div>
+            <p><strong>Bewertung:</strong> <span id="result-correct"></span></p>
+            <p><strong>Feedback:</strong> <span id="result-feedback"></span></p>
+            <button id="btn-play-bonus-game" class="hint-btn hidden">🎮 Bonus-Spiel spielen (+1 ⭐)</button>
+          </section>
+        </div>
+      </details>
 
       <p id="status" class="status"></p>
     </section>

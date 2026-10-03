@@ -1354,6 +1354,12 @@ const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const submitBtn = document.getElementById("submit-btn");
 const nextBtn = document.getElementById("btn-next");
+const taskFeedbackPanel = document.getElementById("task-feedback-panel");
+const taskFeedbackSummary = document.getElementById("task-feedback-summary-text");
+
+function setTaskFeedbackSummary(text) {
+  taskFeedbackSummary.textContent = text;
+}
 
 function startTaskFlow(queue) {
   state.queue = queue;
@@ -1417,6 +1423,8 @@ function loadCurrentTask() {
     restoreCanvasFromImage(answer.image);
   }
   resultEl.classList.add("hidden");
+  taskFeedbackPanel.open = false;
+  setTaskFeedbackSummary("Vorschau und Hinweise");
   statusEl.textContent = "";
 
   // Uebungsmodus: Abgeben wertet sofort aus. Pruefungsmodus: Navigation + eine Gesamt-Abgabe
@@ -1437,11 +1445,15 @@ function loadCurrentTask() {
   // Stand explizit merken (siehe hint-btn-Handler), statt ihn hier aus problem.hints herzuleiten.
   const hintsExhausted = Boolean(answer?.hintsExhausted);
   hintBtn.disabled = hintsExhausted;
-  hintBtn.textContent = hintsExhausted ? "💡 Keine weiteren Hinweise" : "💡 Hinweis";
+  hintBtn.querySelector(".task-control-label").textContent = hintsExhausted ? "Keine weiteren Hinweise" : "Hinweis";
+  hintBtn.title = hintsExhausted ? "Keine weiteren Hinweise verfügbar" : "Hinweis anzeigen (kostet die Punkte dieser Aufgabe)";
+  hintBtn.setAttribute("aria-label", hintBtn.title);
   const hintBox = document.getElementById("hint-box");
   if (answer?.revealedHints?.length > 0) {
     hintBox.textContent = answer.revealedHints[answer.revealedHints.length - 1];
     hintBox.classList.remove("hidden");
+    taskFeedbackPanel.open = true;
+    setTaskFeedbackSummary("Hinweis anzeigen / ausblenden");
   } else {
     hintBox.textContent = "";
     hintBox.classList.add("hidden");
@@ -1465,18 +1477,23 @@ document.getElementById("hint-btn").addEventListener("click", async () => {
   if (!ok) {
     hintBox.textContent = `Fehler: ${data.error || "Hinweis konnte nicht geladen werden."}`;
     hintBox.classList.remove("hidden");
+    taskFeedbackPanel.open = true;
     return;
   }
 
   state.hintsUsedForCurrent = true;
   hintBox.textContent = data.totalHints > 0 ? `Hinweis ${data.hintIndex + 1}/${data.totalHints}: ${data.hint}` : data.hint;
   hintBox.classList.remove("hidden");
+  taskFeedbackPanel.open = true;
+  setTaskFeedbackSummary("Hinweis anzeigen / ausblenden");
 
   if (data.hasMore) {
     state.nextHintIndex = data.hintIndex + 1;
   } else {
     hintBtn.disabled = true;
-    hintBtn.textContent = "💡 Keine weiteren Hinweise";
+    hintBtn.querySelector(".task-control-label").textContent = "Keine weiteren Hinweise";
+    hintBtn.title = "Keine weiteren Hinweise verfügbar";
+    hintBtn.setAttribute("aria-label", hintBtn.title);
   }
 
   // Pruefungsmodus: Hinweis-Stand pro Aufgabe merken, damit er beim Zurueckblaettern erhalten bleibt.
@@ -1530,6 +1547,11 @@ submitBtn.addEventListener("click", async () => {
     }
     document.getElementById("result-feedback").textContent = data.feedback || "";
     resultEl.classList.remove("hidden");
+    taskFeedbackPanel.open = false;
+    setTaskFeedbackSummary(
+      `${data.correct ? "Richtig" : data.awarded > 0 ? "Teilweise richtig" : "Nicht korrekt"} · ${data.awarded} / ${data.points} Punkte · Details antippen`
+    );
+    requestAnimationFrame(() => taskFeedbackPanel.querySelector("summary").scrollIntoView({ behavior: "smooth", block: "nearest" }));
     statusEl.textContent = "";
 
     const resultEntry = {

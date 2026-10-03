@@ -593,6 +593,26 @@ h1 {
   margin-bottom: 0.75rem;
 }
 
+.task-controls .toolbar {
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.task-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 40px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.15;
+}
+
+.task-action-btn > [aria-hidden="true"] {
+  font-size: 1.05rem;
+}
+
 /* Scrollbarer Rahmen um die Canvas-Ebenen: die Zeichenflaeche kann per "Mehr Platz"-Knopf
    ueber die Standardhoehe hinaus wachsen (fuer laengere Loesungswege), ohne dass Werkzeugleiste
    und Abgeben-Knopf aus dem sichtbaren Bereich rutschen - stattdessen scrollt nur dieser Rahmen. */
@@ -691,7 +711,18 @@ button {
   border-color: var(--ink);
 }
 
+#btn-next {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--ink), var(--accent));
+  color: #fff;
+  border-color: var(--ink);
+}
+
 #exam-submit-btn {
+  margin-left: auto;
+}
+
+#exam-nav #exam-submit-btn {
   margin-left: auto;
 }
 
@@ -718,8 +749,58 @@ button {
   padding: 0.6rem 0.8rem;
 }
 
+.task-feedback-panel {
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #d8deef;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+}
+
+.task-feedback-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding: 0.55rem 0.85rem;
+  color: var(--ink);
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.task-feedback-summary::-webkit-details-marker {
+  display: none;
+}
+
+.task-feedback-summary-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  transition: transform 0.18s ease;
+}
+
+.task-feedback-panel[open] .task-feedback-summary-icon {
+  transform: rotate(180deg);
+}
+
+.task-feedback-content {
+  padding: 0 0.85rem 0.85rem;
+  border-top: 1px solid #eef0f6;
+}
+
+.task-feedback-content .live-preview,
+.task-feedback-content .hint-box {
+  margin-top: 0.75rem;
+}
+
 .result {
-  margin-top: 1.5rem;
+  margin-top: 0.75rem;
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -728,6 +809,45 @@ button {
 
 .result.hidden {
   display: none;
+}
+
+@media (max-width: 600px) {
+  .task-controls .toolbar {
+    gap: 0.3rem;
+  }
+
+  .task-action-btn {
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0.35rem 0.55rem;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+  }
+
+  .task-action-btn .task-control-label {
+    display: none;
+  }
+
+  #submit-btn .task-control-label,
+  #exam-submit-btn .task-control-label {
+    display: inline;
+  }
+
+  #submit-btn,
+  #btn-next,
+  #exam-submit-btn {
+    margin-left: auto;
+  }
+
+  #btn-next .task-control-label {
+    display: inline;
+  }
+
+  .task-feedback-summary {
+    min-height: 46px;
+    padding-right: 0.7rem;
+    padding-left: 0.7rem;
+  }
 }
 
 .status {
