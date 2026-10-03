@@ -1361,16 +1361,21 @@ const hintSummaryText = document.getElementById("hint-summary-text");
 
 function renderRevealedHints(hints) {
   hintBox.replaceChildren();
+  if (hints.length === 0) {
+    const emptyMessage = document.createElement("p");
+    emptyMessage.className = "hint-list-item hint-list-empty";
+    emptyMessage.textContent = "Tippe auf „Hinweis“, um dir Hilfestellungen anzeigen zu lassen.";
+    hintBox.appendChild(emptyMessage);
+  }
   hints.forEach((hint) => {
     const item = document.createElement("p");
     item.className = "hint-list-item";
     item.textContent = hint;
     hintBox.appendChild(item);
   });
-  hintPanel.classList.toggle("hidden", hints.length === 0);
   hintSummaryText.textContent = hints.length
     ? `${hints.length} ${hints.length === 1 ? "Hinweis" : "Hinweise"} anzeigen`
-    : "Hinweise anzeigen";
+    : "Hinweise";
 }
 
 function startTaskFlow(queue) {
@@ -1473,6 +1478,14 @@ function loadCurrentTask() {
 document.getElementById("hint-btn").addEventListener("click", async () => {
   const problem = state.queue[state.currentIndex];
   const hintBtn = document.getElementById("hint-btn");
+  if (!problem) return;
+
+  hintPanel.classList.remove("hidden");
+  hintPanel.open = true;
+  const loadingMessage = document.createElement("p");
+  loadingMessage.className = "hint-list-item hint-list-empty";
+  loadingMessage.textContent = "Hinweis wird geladen …";
+  hintBox.replaceChildren(loadingMessage);
 
   const { ok, data } = await api(
     `/api/hint?problemId=${encodeURIComponent(problem.id)}&index=${state.nextHintIndex}`
