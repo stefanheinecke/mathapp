@@ -331,21 +331,25 @@
       <p id="problem-text" class="problem-text"></p>
       <div id="problem-images" class="problem-images"></div>
 
-      <details id="hint-panel" class="task-hint-panel">
-        <summary class="task-hint-summary">
+      <!-- Drei gleich aufgebaute, unabhaengig auf-/zuklappbare Bereiche: Hinweise, Zeichenflaeche, Ergebnis. -->
+      <details id="hint-panel" class="task-section">
+        <summary class="task-section-summary">
           <span aria-hidden="true">💡</span>
-          <span id="hint-summary-text">Hinweise anzeigen</span>
-          <span class="task-hint-chevron" aria-hidden="true">▾</span>
+          <span id="hint-summary-text">Hinweise</span>
+          <span class="task-section-chevron" aria-hidden="true">▾</span>
         </summary>
-        <div id="hint-box" class="hint-list"></div>
+        <div class="task-section-content">
+          <div id="hint-box" class="hint-list"></div>
+        </div>
       </details>
 
-      <details id="canvas-panel" class="canvas-panel" open>
-        <summary class="canvas-panel-summary">
-          <span>Deine Lösung und Zeichenfläche</span>
-          <span class="disclosure-chevron" aria-hidden="true">▾</span>
+      <details id="canvas-panel" class="task-section" open>
+        <summary class="task-section-summary">
+          <span aria-hidden="true">✏️</span>
+          <span>Zeichenfläche</span>
+          <span class="task-section-chevron" aria-hidden="true">▾</span>
         </summary>
-        <div class="canvas-panel-content">
+        <div class="task-section-content">
           <section class="canvas-wrap">
             <div id="notebook-scroll" class="notebook-scroll">
               <div id="notebook-stack" class="notebook-stack">
@@ -364,12 +368,13 @@
         </div>
       </details>
 
-      <details id="result" class="result hidden">
-        <summary class="result-summary">
-          <h2>Ergebnisbewertung</h2>
-          <span class="disclosure-chevron" aria-hidden="true">▾</span>
+      <details id="result" class="task-section hidden">
+        <summary class="task-section-summary">
+          <span aria-hidden="true">✅</span>
+          <span>Ergebnis</span>
+          <span class="task-section-chevron" aria-hidden="true">▾</span>
         </summary>
-        <div class="result-content">
+        <div class="task-section-content">
           <p><strong>Erkannte Antwort:</strong> <span id="result-transcription"></span></p>
           <p><strong>Deine Lösung (erkannt):</strong></p>
           <div id="result-latex-rendered"></div>

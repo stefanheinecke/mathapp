@@ -589,7 +589,7 @@ h1 {
   margin-top: 1rem;
 }
 
-.canvas-panel {
+.task-section {
   margin-top: 0.75rem;
   overflow: hidden;
   border: 1px solid #d8deef;
@@ -597,12 +597,10 @@ h1 {
   background: #fff;
 }
 
-.canvas-panel-summary,
-.result-summary {
+.task-section-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.55rem;
   min-height: 46px;
   padding: 0.65rem 0.85rem;
   color: var(--ink);
@@ -612,27 +610,26 @@ h1 {
   -webkit-tap-highlight-color: transparent;
 }
 
-.canvas-panel-summary::-webkit-details-marker,
-.result-summary::-webkit-details-marker {
+.task-section-summary::-webkit-details-marker {
   display: none;
 }
 
-.disclosure-chevron {
+.task-section-chevron {
+  margin-left: auto;
   flex: 0 0 auto;
   transition: transform 0.18s ease;
 }
 
-.canvas-panel[open] .disclosure-chevron,
-.result[open] .disclosure-chevron {
+.task-section[open] .task-section-chevron {
   transform: rotate(180deg);
 }
 
-.canvas-panel-content {
+.task-section-content {
   padding: 0 0.85rem 0.85rem;
   border-top: 1px solid #eef0f6;
 }
 
-.canvas-panel-content .canvas-wrap {
+.task-section-content .canvas-wrap {
   margin-top: 0.75rem;
 }
 
@@ -788,44 +785,8 @@ button {
   cursor: default;
 }
 
-.task-hint-panel {
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
-  overflow: hidden;
-  border: 1px solid #e0b400;
-  border-radius: 10px;
-  background: #fffdf5;
-}
-
-.task-hint-summary {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  min-height: 44px;
-  padding: 0.55rem 0.85rem;
-  color: #594700;
-  font-weight: 650;
-  cursor: pointer;
-  list-style: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.task-hint-summary::-webkit-details-marker {
-  display: none;
-}
-
-.task-hint-chevron {
-  margin-left: auto;
-  transition: transform 0.18s ease;
-}
-
-.task-hint-panel[open] .task-hint-chevron {
-  transform: rotate(180deg);
-}
-
 .hint-list {
-  padding: 0 0.85rem 0.75rem;
-  border-top: 1px solid #f3e8b4;
+  margin-top: 0.75rem;
 }
 
 .hint-list-item {
@@ -837,26 +798,11 @@ button {
   line-height: 1.45;
 }
 
-.result {
-  margin-top: 0.75rem;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0;
+.hint-list-item:first-child {
+  margin-top: 0;
 }
 
-.result-summary h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.result-content {
-  padding: 0 1rem 1rem;
-  border-top: 1px solid #eef0f6;
-}
-
-.result.hidden {
+.task-section.hidden {
   display: none;
 }
 
@@ -892,7 +838,7 @@ button {
     display: inline;
   }
 
-  .task-hint-summary {
+  .task-section-summary {
     min-height: 46px;
     padding-right: 0.7rem;
     padding-left: 0.7rem;
