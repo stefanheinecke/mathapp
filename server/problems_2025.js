@@ -2,6 +2,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1a1",
     text: "Vereinfache den Term so weit wie möglich: 2(x − 2) − 3(1 − 2x)",
+    latex: "\\text{Vereinfache den Term so weit wie möglich: } 2(x - 2) - 3(1 - 2x)",
     answer: "8x − 7",
     year: 2025,
     category: "Termumformung",
@@ -15,6 +16,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1a2",
     text: "Vereinfache den Term so weit wie möglich: 2x · (3x · 5z)",
+    latex: "\\text{Vereinfache den Term so weit wie möglich: } 2x \\cdot (3x \\cdot 5z)",
     answer: "30x²z",
     year: 2025,
     category: "Termumformung",
@@ -28,6 +30,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1b",
     text: "Berechne den Wert des Terms 4x² − 2y für x = −3 und y = 5.",
+    latex: "\\text{Berechne den Wert des Terms } 4x^2 - 2y \\text{ für } x = -3 \\text{ und } y = 5.",
     answer: "26",
     year: 2025,
     category: "Termumformung",
@@ -41,6 +44,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1c",
     text: "Klammere so viel wie möglich aus: 24a²b − 36abc.",
+    latex: "\\text{Klammere so viel wie möglich aus: } 24a^2b - 36abc.",
     answer: "12ab(2a − 3c)",
     year: 2025,
     category: "Termumformung",
@@ -54,6 +58,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1d",
     text: "Löse die Gleichung nach a auf: 4b = 3a/2 + 1.",
+    latex: "\\text{Löse die Gleichung nach } a \\text{ auf: } 4b = \\dfrac{3a}{2} + 1.",
     answer: "a = (8b − 2)/3",
     year: 2025,
     category: "Gleichung",
@@ -67,6 +72,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1e",
     text: "Berechne den grössten gemeinsamen Teiler (ggT) von 72 und 180.",
+    latex: "\\text{Berechne den grössten gemeinsamen Teiler (ggT) von } 72 \\text{ und } 180.",
     answer: "36",
     year: 2025,
     category: "Termumformung",
@@ -80,6 +86,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1f",
     text: "Wandle in m³ um: 2.45 l.",
+    latex: "\\text{Wandle in } \\mathrm{m}^3 \\text{ um: } 2.45\\,\\mathrm{l}.",
     answer: "0.00245 m³",
     year: 2025,
     category: "Grössenumrechnungen",
@@ -93,6 +100,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1g",
     text: "Berechne den Flächeninhalt des Rhombus. Entnimm die Längenangaben der Abbildung.",
+    latex: "\\text{Berechne den Flächeninhalt des Rhombus. Entnimm die Längenangaben der Abbildung.}",
     images: ["/images/problem-2025-1g.png"],
     answer: "240 cm²",
     year: 2025,
@@ -107,6 +115,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1h",
     text: "Eine Pyramide mit quadratischer Grundfläche ist 6 cm hoch und hat ein Volumen von 200 cm³. Berechne die Kantenlänge a der Grundfläche.",
+    latex: "\\text{Eine Pyramide mit quadratischer Grundfläche ist } 6\\,\\mathrm{cm} \\text{ hoch und hat ein Volumen von } 200\\,\\mathrm{cm}^3. \\text{Berechne die Kantenlänge } a \\text{ der Grundfläche.}",
     images: ["/images/problem-2025-1h.png"],
     answer: "a = 10 cm",
     year: 2025,
@@ -121,6 +130,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-1i",
     text: "Konstruiere den Umkreismittelpunkt des abgebildeten Dreiecks ABC und beschrifte ihn mit U.",
+    latex: "\\text{Konstruiere den Umkreismittelpunkt des abgebildeten Dreiecks } ABC \\text{ und beschrifte ihn mit } U.",
     images: ["/images/problem-2025-1i.png"],
     answer: "U ist der Schnittpunkt der Mittelsenkrechten der Dreiecksseiten.",
     gradingType: "construction",
@@ -138,6 +148,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-2a",
     text: "Löse die Gleichung nach x auf: 2 − (52x − 27) = 15 − 5(8x + 2).",
+    latex: "\\text{Löse die Gleichung nach } x \\text{ auf: } 2 - (52x - 27) = 15 - 5(8x + 2).",
     answer: "x = 2",
     year: 2025,
     category: "Gleichung",
@@ -151,6 +162,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-2b",
     text: "Löse die Gleichung nach x auf: (5/7) · (3x − 1/4) = 2x + 3/14.",
+    latex: "\\text{Löse die Gleichung nach } x \\text{ auf: } \\dfrac{5}{7} \\cdot \\left(3x - \\dfrac{1}{4}\\right) = 2x + \\dfrac{3}{14}.",
     answer: "x = 11/4 = 2.75",
     year: 2025,
     category: "Gleichung",
@@ -164,6 +176,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-3a",
     text: "Vereinfache den Term so weit wie möglich: (2xy/3) − (25x²y/24) : (5x/4).",
+    latex: "\\text{Vereinfache den Term so weit wie möglich: } \\dfrac{2xy}{3} - \\dfrac{25x^2y}{24} : \\dfrac{5x}{4}.",
     answer: "−xy/6",
     year: 2025,
     category: "Termumformung",
@@ -177,6 +190,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-3b",
     text: "Vereinfache den Term so weit wie möglich (es gilt x > 0): (√(169x² − (5x)²)/√(2x)) : (√(65x² − x²)/√(8x)).",
+    latex: "\\text{Vereinfache den Term so weit wie möglich (es gilt } x > 0\\text{): } \\dfrac{\\sqrt{169x^2 - (5x)^2}}{\\sqrt{2x}} : \\dfrac{\\sqrt{65x^2 - x^2}}{\\sqrt{8x}}.",
     answer: "3",
     year: 2025,
     category: "Termumformung",
@@ -190,6 +204,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-4a",
     text: "Stelle eine Gleichung mit der Unbekannten x auf; löse sie nicht und vereinfache sie nicht. Gesucht ist eine Zahl. Die Hälfte der um eins verkleinerten Zahl ist um 12 grösser als der dritte Teil der Zahl. x = gesuchte Zahl.",
+    latex: "\\text{Stelle eine Gleichung mit der Unbekannten } x \\text{ auf; löse sie nicht und vereinfache sie nicht. Gesucht ist eine Zahl. Die Hälfte der um eins verkleinerten Zahl } \\dfrac{x - 1}{2} \\text{ ist um 12 grösser als der dritte Teil der Zahl } \\dfrac{x}{3}. \\text{Dabei ist } x \\text{ die gesuchte Zahl.}",
     answer: "(x − 1)/2 = x/3 + 12",
     year: 2025,
     category: "Gleichung",
@@ -203,6 +218,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-4b",
     text: "Stelle eine Gleichung mit der Unbekannten x auf; löse sie nicht und vereinfache sie nicht. Pralinen werden in gleich grosse Schachteln abgepackt. Nachdem 5 Schachteln abgepackt sind, bleiben noch 58 unverpackte Pralinen übrig. Würden 7 Schachteln abgepackt, würden in einer Schachtel 2 Pralinen fehlen. Gesucht ist die Anzahl der Pralinen pro Schachtel. x = Anzahl Pralinen pro Schachtel.",
+    latex: "\\text{Stelle eine Gleichung mit der Unbekannten } x \\text{ auf; löse sie nicht und vereinfache sie nicht. Pralinen werden in gleich grosse Schachteln abgepackt. Nachdem } 5 \\text{ Schachteln abgepackt sind, bleiben noch } 58 \\text{ unverpackte Pralinen übrig. Würden } 7 \\text{ Schachteln abgepackt, würden in einer Schachtel } 2 \\text{ Pralinen fehlen. Gesucht ist die Anzahl der Pralinen pro Schachtel. } x \\text{ bezeichnet diese Anzahl.}",
     answer: "5x + 58 = 7x − 2",
     year: 2025,
     category: "Gleichung",
@@ -216,6 +232,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-4c",
     text: "Stelle eine Gleichung mit der Unbekannten x auf; löse sie nicht und vereinfache sie nicht. Auf einem Bauernhof leben Hühner und Schafe, insgesamt 167 Tiere. Zusammen haben sie 518 Beine. Gesucht ist die Anzahl Hühner. x = Anzahl Hühner auf dem Bauernhof.",
+    latex: "\\text{Stelle eine Gleichung mit der Unbekannten } x \\text{ auf; löse sie nicht und vereinfache sie nicht. Auf einem Bauernhof leben Hühner und Schafe, insgesamt } 167 \\text{ Tiere. Zusammen haben sie } 518 \\text{ Beine. Gesucht ist die Anzahl Hühner. } x \\text{ bezeichnet die Anzahl Hühner auf dem Bauernhof.}",
     answer: "2x + 4(167 − x) = 518",
     year: 2025,
     category: "Gleichung",
@@ -229,6 +246,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-5a",
     text: "Aufgrund einer neuen Streckenführung reduziert sich die Fahrzeit für eine Zugfahrt von 16 Minuten auf 11 Minuten. Berechne die Zeitersparnis in Prozent.",
+    latex: "\\text{Aufgrund einer neuen Streckenführung reduziert sich die Fahrzeit für eine Zugfahrt von } 16 \\text{ Minuten auf } 11 \\text{ Minuten. Berechne die Zeitersparnis in Prozent.}",
     answer: "31.25%",
     year: 2025,
     category: "Textaufgabe",
@@ -242,6 +260,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-5b",
     text: "Ist eine Dose komplett mit Zucker gefüllt, wiegen Dose und Zucker zusammen 1.46 kg. Ist die Dose zu 60% mit Zucker gefüllt, wiegen Dose und Zucker zusammen 0.94 kg. Berechne das Gewicht der leeren Dose.",
+    latex: "\\text{Ist eine Dose komplett mit Zucker gefüllt, wiegen Dose und Zucker zusammen } 1.46\\,\\mathrm{kg}. \\text{Ist die Dose zu } 60\\% \\text{ mit Zucker gefüllt, wiegen Dose und Zucker zusammen } 0.94\\,\\mathrm{kg}. \\text{Berechne das Gewicht der leeren Dose.}",
     images: ["/images/problem-2025-5b.png"],
     answer: "0.16 kg = 160 g",
     year: 2025,
@@ -256,6 +275,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-6a",
     text: "Die Gerade g verläuft parallel zur x-Achse auf der Höhe y = 300. Der Punkt P(292 | −329) wird an der Geraden g gespiegelt. Berechne die Koordinaten des gespiegelten Punktes P′.",
+    latex: "\\text{Die Gerade } g \\text{ verläuft parallel zur } x\\text{-Achse auf der Höhe } y = 300. \\text{Der Punkt } P(292 \\mid -329) \\text{ wird an der Geraden } g \\text{ gespiegelt. Berechne die Koordinaten des gespiegelten Punktes } P'.",
     images: ["/images/problem-2025-6a.png"],
     answer: "P′(292 | 929)",
     year: 2025,
@@ -270,6 +290,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-6b",
     text: "Der Punkt Q(181 | 375) wird am Punkt Z(430 | −320) gespiegelt. Berechne die Koordinaten des gespiegelten Punktes Q′.",
+    latex: "\\text{Der Punkt } Q(181 \\mid 375) \\text{ wird am Punkt } Z(430 \\mid -320) \\text{ gespiegelt. Berechne die Koordinaten des gespiegelten Punktes } Q'.",
     images: ["/images/problem-2025-6b.png"],
     answer: "Q′(679 | −1015)",
     year: 2025,
@@ -284,6 +305,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-7a",
     text: "Mahisha hält verdeckt in einer Hand 1 kurzes und 4 lange Streichhölzer und in der anderen Hand 2 kurze und 5 lange Streichhölzer. Theo zieht aus beiden Händen je ein Streichholz. Berechne die Wahrscheinlichkeit, dass Theo ein kurzes und ein langes Streichholz zieht, egal in welcher Reihenfolge.",
+    latex: "\\text{Mahisha hält verdeckt in einer Hand } 1 \\text{ kurzes und } 4 \\text{ lange Streichhölzer und in der anderen Hand } 2 \\text{ kurze und } 5 \\text{ lange Streichhölzer. Theo zieht aus beiden Händen je ein Streichholz. Berechne die Wahrscheinlichkeit, dass Theo ein kurzes und ein langes Streichholz zieht, egal in welcher Reihenfolge.}",
     answer: "13/35 ≈ 37.1%",
     year: 2025,
     category: "Textaufgabe",
@@ -297,6 +319,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-7b",
     text: "Eine Auswertung zeigt, dass 21 100 Teilnehmende an einem Samstag oder Sonntag geboren wurden. Wie viele Personen haben am Wettbewerb teilgenommen? Wähle am ehesten 68 000, 70 000, 72 000, 74 000 oder 76 000. Gehe davon aus, dass an allen Wochentagen gleich viele Kinder geboren werden, und begründe deine Antwort mit einer Rechnung.",
+    latex: "\\text{Eine Auswertung zeigt, dass } 21\\,100 \\text{ Teilnehmende an einem Samstag oder Sonntag geboren wurden. Wie viele Personen haben am Wettbewerb teilgenommen? Wähle am ehesten } 68\\,000, 70\\,000, 72\\,000, 74\\,000 \\text{ oder } 76\\,000. \\text{Gehe davon aus, dass an allen Wochentagen gleich viele Kinder geboren werden, und begründe deine Antwort mit einer Rechnung.}",
     answer: "Etwa 74 000 Teilnehmende (rechnerisch 73 850).",
     year: 2025,
     category: "Textaufgabe",
@@ -310,6 +333,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-8",
     text: "Die nicht massstabsgetreue Abbildung zeigt zwei rechtwinklige Dreiecke und ein Parallelenviereck. Die drei Figuren haben den gleichen Flächeninhalt. Berechne die Länge der Strecke x. Entnimm die Längenangaben der Abbildung.",
+    latex: "\\text{Die nicht massstabsgetreue Abbildung zeigt zwei rechtwinklige Dreiecke und ein Parallelenviereck. Die drei Figuren haben den gleichen Flächeninhalt. Berechne die Länge der Strecke } x. \\text{Entnimm die Längenangaben der Abbildung.}",
     images: ["/images/problem-2025-8.png"],
     answer: "x = 40 cm",
     year: 2025,
@@ -324,6 +348,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-9a",
     text: "Eine prismenförmige Wanne mit trapezförmigem Querschnitt fasst 595 dm³ Wasser, wenn sie komplett gefüllt ist. Es handelt sich um ein gerades Prisma. Berechne die Länge der Kante x. Entnimm die Längenangaben der Abbildung.",
+    latex: "\\text{Eine prismenförmige Wanne mit trapezförmigem Querschnitt fasst } 595\\,\\mathrm{dm}^3 \\text{ Wasser, wenn sie komplett gefüllt ist. Es handelt sich um ein gerades Prisma. Berechne die Länge der Kante } x. \\text{Entnimm die Längenangaben der Abbildung.}",
     images: ["/images/problem-2025-9a.png"],
     answer: "x = 6 dm",
     year: 2025,
@@ -338,6 +363,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-9b",
     text: "Eine andere prismenförmige Wanne mit trapezförmigem Querschnitt fasst 450 dm³ Wasser, wenn sie komplett gefüllt ist. Aus der komplett gefüllten Wanne wird so viel Wasser abgelassen, dass das Wasser nur noch halb so hoch steht. Berechne, welcher Anteil der ursprünglichen Wassermenge sich nun noch in der Wanne befindet. Gib das Resultat als Bruch, Dezimalzahl oder Prozent an. Entnimm die Längenangaben der Abbildung.",
+    latex: "\\text{Eine andere prismenförmige Wanne mit trapezförmigem Querschnitt fasst } 450\\,\\mathrm{dm}^3 \\text{ Wasser, wenn sie komplett gefüllt ist. Aus der komplett gefüllten Wanne wird so viel Wasser abgelassen, dass das Wasser nur noch halb so hoch steht. Berechne, welcher Anteil der ursprünglichen Wassermenge sich nun noch in der Wanne befindet. Gib das Resultat als Bruch, Dezimalzahl oder Prozent an. Entnimm die Längenangaben der Abbildung.}",
     images: ["/images/problem-2025-9b.png"],
     answer: "3/8 = 0.375 = 37.5%",
     year: 2025,
@@ -352,6 +378,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-10a",
     text: "Ein dreiseitiges Prisma hat 6 Ecken, 9 Kanten und 5 Flächen. Ein anderes Prisma hat 21 Kanten. Wie viele Flächen hat es?",
+    latex: "\\text{Ein dreiseitiges Prisma hat } 6 \\text{ Ecken, } 9 \\text{ Kanten und } 5 \\text{ Flächen. Ein anderes Prisma hat } 21 \\text{ Kanten. Wie viele Flächen hat es?}",
     answer: "9 Flächen",
     year: 2025,
     category: "Geometrie",
@@ -365,6 +392,7 @@ const RAW_PROBLEMS = [
   {
     id: "2025-10b",
     text: "Ein beliebiges Prisma hat f Flächen. Gib eine Formel zur Berechnung der Anzahl Kanten k an.",
+    latex: "\\text{Ein beliebiges Prisma hat } f \\text{ Flächen. Gib eine Formel zur Berechnung der Anzahl Kanten } k \\text{ an.}",
     answer: "k = 3(f − 2)",
     year: 2025,
     category: "Geometrie",
