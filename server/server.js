@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import { checkSteps } from "./mathCheck.js";
-import { PROBLEMS, filterProblems, listYears, listCategories } from "./problems.js";
+import { PROBLEMS, findProblem, filterProblems, listYears, listCategories } from "./problems.js";
 import {
   initDb,
   saveResult,
@@ -52,6 +52,18 @@ if (!process.env.MATHPIX_APP_ID || !process.env.MATHPIX_APP_KEY) {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+const DEMO_PROBLEM_ID = "2026-1a2";
+const DEMO_EVALUATION_WINDOW_MS = 15 * 60 * 1000;
+const DEMO_EVALUATION_MAX_REQUESTS = 5;
+const demoEvaluationsByIp = new Map();
+
+const demoEvaluationCleanup = setInterval(() => {
+  const expiredBefore = Date.now() - DEMO_EVALUATION_WINDOW_MS;
+  for (const [ip, attempts] of demoEvaluationsByIp) {
+    if (attempts.windowStartedAt <= expiredBefore) demoEvaluationsByIp.delete(ip);
+  }
+}, DEMO_EVALUATION_WINDOW_MS);
+demoEvaluationCleanup.unref();
 
 // Schickt das Canvas-Bild an MathPix OCR und liefert Klartext + LaTeX der Handschrift zurueck.
 async function recognizeHandwriting(imageDataUrl) {
@@ -234,6 +246,36 @@ async function requireSubscription(req, res, next) {
     console.error(err);
     res.status(500).json({ error: "Abo-Status konnte nicht geprueft werden.", details: err?.message });
   }
+}
+
+function allowGuestDemoEvaluation(ip) {
+  const now = Date.now();
+  const attempts = demoEvaluationsByIp.get(ip);
+  if (!attempts || now - attempts.windowStartedAt >= DEMO_EVALUATION_WINDOW_MS) {
+    demoEvaluationsByIp.set(ip, { windowStartedAt: now, count: 1 });
+    return true;
+  }
+  if (attempts.count >= DEMO_EVALUATION_MAX_REQUESTS) return false;
+  attempts.count += 1;
+  return true;
+}
+
+function requireEvaluationAccess(req, res, next) {
+  const isGuestDemo =
+    !AUTH_BYPASS &&
+    !getBearerToken(req) &&
+    req.body?.demo === true &&
+    req.body?.problemId === DEMO_PROBLEM_ID;
+  if (isGuestDemo) {
+    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+    if (!allowGuestDemoEvaluation(clientIp)) {
+      return res.status(429).json({
+        error: "Das Demo-Limit ist erreicht. Bitte versuche es später erneut oder melde dich an.",
+      });
+    }
+    return next();
+  }
+  return requireAuth(req, res, () => requireSubscription(req, res, next));
 }
 
 const USERNAME_RE = /^[A-Za-z0-9_.-]{3,40}$/;
@@ -560,6 +602,23 @@ app.post("/api/subscription/webhook", async (req, res) => {
 
 // Uebungsmodus: einzelne Aufgabe nach Jahr/Kategorie filtern.
 // Pruefungsmodus: alle Aufgaben eines Jahres bzw. einer Kategorie abrufen (gleicher Endpunkt).
+app.get("/api/demo/problem", (_req, res) => {
+  const problem = findProblem(DEMO_PROBLEM_ID);
+  if (!problem) {
+    console.error(`Demo-Aufgabe ${DEMO_PROBLEM_ID} fehlt in der Aufgabendatenbank.`);
+    return res.status(500).json({ error: "Die Demo-Aufgabe ist momentan nicht verfügbar." });
+  }
+  res.json({
+    id: problem.id,
+    text: problem.text,
+    latex: problem.latex,
+    images: problem.images,
+    year: problem.year,
+    category: problem.category,
+    points: problem.points,
+  });
+});
+
 app.get("/api/problems", requireAuth, requireSubscription, (req, res) => {
   const { year, category } = req.query;
   const filtered = filterProblems({ year, category });
@@ -607,7 +666,7 @@ app.post("/api/ocr-preview", requireAuth, requireSubscription, async (req, res) 
   }
 });
 
-app.post("/api/evaluate", requireAuth, requireSubscription, async (req, res) => {
+app.post("/api/evaluate", requireEvaluationAccess, async (req, res) => {
   try {
     const { problemId, image, hintsUsed } = req.body || {};
     if (typeof problemId !== "string" || typeof image !== "string") {

@@ -367,6 +367,12 @@ h1 {
   max-width: 480px;
 }
 
+.hero-demo-caption {
+  margin: 0.55rem 0 0;
+  color: #666;
+  font-size: 0.82rem;
+}
+
 .hero-sticky-note {
   position: relative;
   width: fit-content;
@@ -418,6 +424,25 @@ h1 {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.demo-notice,
+.demo-result-message {
+  border: 1px solid #edda82;
+  border-radius: 10px;
+  background: #fff8d5;
+  color: #51451b;
+}
+
+.demo-notice {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+}
+
+.demo-result-message {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
 }
 
 .btn-primary,

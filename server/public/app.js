@@ -464,13 +464,13 @@ function hideLivePreview() {
 }
 
 function scheduleLivePreview() {
-  if (!hasInk) return;
+  if (!hasInk || state.mode === "demo") return;
   clearTimeout(livePreviewTimer);
   livePreviewTimer = setTimeout(runLivePreview, LIVE_PREVIEW_DEBOUNCE_MS);
 }
 
 async function runLivePreview() {
-  if (livePreviewInFlight || !hasInk) return;
+  if (livePreviewInFlight || !hasInk || state.mode === "demo") return;
   livePreviewInFlight = true;
   try {
     const image = canvas.toDataURL("image/png");
@@ -711,7 +711,7 @@ const state = {
   subscriptionActive: false,
   paidSubscriptionActive: false,
   subscriptionStatus: "inactive",
-  mode: null, // 'uebung' | 'pruefung_jahr' | 'pruefung_kategorie'
+  mode: null, // 'demo' | 'uebung' | 'pruefung_jahr' | 'pruefung_kategorie'
   scope: null, // problemId (uebung) oder Jahr/Kategorie (pruefung)
   queue: [],
   currentIndex: 0,
@@ -1220,11 +1220,26 @@ async function goToUebung() {
   await loadUebungProblems();
 }
 
+async function startHeroExercise() {
+  if (state.token && state.username) {
+    return goToUebung();
+  }
+  if (!confirmLeaveTask()) return;
+  const { ok, data } = await api("/api/demo/problem");
+  if (!ok || data?.id !== "2026-1a2") {
+    alert(`Die Demo-Aufgabe konnte nicht geladen werden: ${data?.error || "unbekannter Fehler"}`);
+    return;
+  }
+  state.mode = "demo";
+  state.scope = data.id;
+  startTaskFlow([data]);
+}
+
 document.getElementById("nav-start").addEventListener("click", goToStart);
 document.getElementById("nav-uebung").addEventListener("click", goToUebung);
 document.getElementById("card-uebung").addEventListener("click", goToUebung);
 document.getElementById("brand-home").addEventListener("click", goToStart);
-document.getElementById("hero-cta-uebung").addEventListener("click", goToUebung);
+document.getElementById("hero-cta-uebung").addEventListener("click", startHeroExercise);
 document.getElementById("hero-cta-pricing").addEventListener("click", goToPricing);
 
 const heroVideo = document.getElementById("hero-video");
@@ -1423,7 +1438,12 @@ function renderProblemImages(images) {
 
 function loadCurrentTask() {
   const problem = state.queue[state.currentIndex];
+  const demoMode = state.mode === "demo";
   const progressEl = document.getElementById("task-progress");
+  document.getElementById("demo-notice").classList.toggle("hidden", !demoMode);
+  document.getElementById("demo-result-message").classList.add("hidden");
+  document.getElementById("btn-demo-register").classList.add("hidden");
+  nextBtn.textContent = "Weiter";
   if (state.queue.length > 1) {
     progressEl.textContent = `Aufgabe ${state.currentIndex + 1} von ${state.queue.length}`;
     progressEl.classList.remove("hidden");
@@ -1450,6 +1470,7 @@ function loadCurrentTask() {
   resultEl.open = false;
   canvasPanel.open = true;
   hintPanel.open = false;
+  hintPanel.classList.toggle("hidden", demoMode);
   statusEl.textContent = "";
 
   // Uebungsmodus: Abgeben wertet sofort aus. Pruefungsmodus: Navigation + eine Gesamt-Abgabe
@@ -1467,6 +1488,7 @@ function loadCurrentTask() {
   state.hintsUsedForCurrent = answer?.hintsUsed ?? false;
   state.currentHints = [...(answer?.revealedHints ?? [])];
   const hintBtn = document.getElementById("hint-btn");
+  hintBtn.classList.toggle("hidden", demoMode);
   // problem.hints wird vom Server nicht mitgeschickt (bleibt geheim) - deshalb den Ausschoepfungs-
   // Stand explizit merken (siehe hint-btn-Handler), statt ihn hier aus problem.hints herzuleiten.
   const hintsExhausted = Boolean(answer?.hintsExhausted);
@@ -1554,7 +1576,12 @@ submitBtn.addEventListener("click", async () => {
     const { ok, data } = await api("/api/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemId: problem.id, image, hintsUsed: state.hintsUsedForCurrent }),
+      body: JSON.stringify({
+        problemId: problem.id,
+        image,
+        hintsUsed: state.hintsUsedForCurrent,
+        demo: state.mode === "demo",
+      }),
     });
     if (!ok) {
       statusEl.textContent = `Fehler: ${data.error || "unbekannt"}`;
@@ -1580,6 +1607,11 @@ submitBtn.addEventListener("click", async () => {
     canvasPanel.open = false;
     resultEl.open = true;
     statusEl.textContent = "";
+    if (state.mode === "demo") {
+      document.getElementById("demo-result-message").classList.remove("hidden");
+      document.getElementById("btn-demo-register").classList.remove("hidden");
+      nextBtn.textContent = "Demo beenden";
+    }
 
     const resultEntry = {
       problemId: problem.id,
@@ -1635,12 +1667,30 @@ submitBtn.addEventListener("click", async () => {
 });
 
 nextBtn.addEventListener("click", () => {
+  if (state.mode === "demo") {
+    state.mode = null;
+    state.scope = null;
+    state.queue = [];
+    state.results = [];
+    setActiveNav("nav-start");
+    showScreen("screen-start");
+    return;
+  }
   state.currentIndex += 1;
   if (state.currentIndex < state.queue.length) {
     loadCurrentTask();
   } else {
     finishRun();
   }
+});
+
+document.getElementById("btn-demo-register").addEventListener("click", () => {
+  state.mode = null;
+  state.scope = null;
+  state.queue = [];
+  state.results = [];
+  pendingAfterLogin = null;
+  showRegisterScreen("free");
 });
 
 // ---------- Pruefungsmodus: freie Navigation + eine Gesamt-Abgabe ----------
@@ -2721,4 +2771,3 @@ document.getElementById("btn-admin-create-user").addEventListener("click", async
   await checkExistingSession();
   await handlePayrexxRedirect();
 })();
-
