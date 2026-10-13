@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -25,6 +26,8 @@ import {
   deactivateSubscription,
   recordSubscriptionCancellationRequest,
   listSubscriptionEvents,
+  recordApiUsage,
+  getAdminApiUsage,
 } from "./db.js";
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
 import {
@@ -38,6 +41,7 @@ import {
   hasCorrect2026_3bDerivation,
   hasFinalFractionResult,
 } from "./grading.js";
+import { calculateOpenAICostUsd, normalizeActivityType } from "./usageCost.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +56,22 @@ if (!process.env.MATHPIX_APP_ID || !process.env.MATHPIX_APP_KEY) {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+function readPrice(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const price = Number(raw);
+  if (!Number.isFinite(price) || price < 0) {
+    throw new Error(`${name} muss eine nicht-negative Zahl sein.`);
+  }
+  return price;
+}
+
+const MATHPIX_PRICE_PER_IMAGE_USD = readPrice("MATHPIX_PRICE_PER_IMAGE_USD", 0.002);
+const OPENAI_RATES = {
+  inputPerMillionUsd: readPrice("OPENAI_INPUT_PRICE_PER_MILLION_USD", 2.5),
+  cachedInputPerMillionUsd: readPrice("OPENAI_CACHED_INPUT_PRICE_PER_MILLION_USD", 1.25),
+  outputPerMillionUsd: readPrice("OPENAI_OUTPUT_PRICE_PER_MILLION_USD", 10),
+};
 const DEMO_PROBLEM_ID = "2026-1a2";
 const DEMO_EVALUATION_WINDOW_MS = 15 * 60 * 1000;
 const DEMO_EVALUATION_MAX_REQUESTS = 5;
@@ -92,11 +112,88 @@ async function recognizeHandwriting(imageDataUrl) {
   };
 }
 
+function createUsageContext(req) {
+  return {
+    username: req.user?.username || (req.body?.demo === true ? "Gast-Demo" : "Unbekannt"),
+    requestId: randomUUID(),
+    activityType: normalizeActivityType(req.body?.activityType, req.body?.demo === true),
+  };
+}
+
+async function recordUsageSafely(usage) {
+  try {
+    await recordApiUsage(usage);
+  } catch (err) {
+    console.error("API-Kosten konnten nicht gespeichert werden:", {
+      username: usage.username,
+      provider: usage.provider,
+      operation: usage.operation,
+      status: usage.status,
+      error: err,
+    });
+  }
+}
+
+async function recognizeHandwritingTracked(imageDataUrl, usageContext, operation) {
+  let recognized;
+  try {
+    recognized = await recognizeHandwriting(imageDataUrl);
+  } catch (err) {
+    await recordUsageSafely({
+      ...usageContext,
+      provider: "mathpix",
+      operation,
+      status: "failed",
+    });
+    throw err;
+  }
+
+  await recordUsageSafely({
+    ...usageContext,
+    provider: "mathpix",
+    operation,
+    costUsd: MATHPIX_PRICE_PER_IMAGE_USD,
+    status: "success",
+  });
+  return recognized;
+}
+
+async function createCompletionTracked(request, usageContext) {
+  let completion;
+  try {
+    completion = await openai.chat.completions.create(request);
+  } catch (err) {
+    await recordUsageSafely({
+      ...usageContext,
+      provider: "openai",
+      operation: "evaluation_llm",
+      model: MODEL,
+      status: "failed",
+    });
+    throw err;
+  }
+
+  const usage = completion.usage;
+  const costUsd = calculateOpenAICostUsd(usage, OPENAI_RATES);
+  await recordUsageSafely({
+    ...usageContext,
+    provider: "openai",
+    operation: "evaluation_llm",
+    model: MODEL,
+    inputTokens: usage?.prompt_tokens ?? null,
+    cachedInputTokens: usage?.prompt_tokens_details?.cached_tokens ?? null,
+    outputTokens: usage?.completion_tokens ?? null,
+    costUsd,
+    status: costUsd === null ? "unknown" : "success",
+  });
+  return completion;
+}
+
 // Konstruktionsaufgaben (z.B. Drachenviereck) lassen sich nicht per OCR/Algebra pruefen - hier
 // beurteilt ein Vision-Modell das Bild direkt anhand der hinterlegten Bewertungsanleitung.
 // Es gibt keine Teilpunkte: entweder der volle Punkt oder keiner.
-async function gradeConstruction(problem, imageDataUrl, hintsUsed) {
-  const completion = await openai.chat.completions.create({
+async function gradeConstruction(problem, imageDataUrl, hintsUsed, usageContext) {
+  const completion = await createCompletionTracked({
     model: MODEL,
     temperature: 0,
     messages: [
@@ -121,7 +218,7 @@ async function gradeConstruction(problem, imageDataUrl, hintsUsed) {
       },
     ],
     response_format: { type: "json_object" },
-  });
+  }, usageContext);
 
   const raw = completion.choices[0]?.message?.content || "{}";
   let result;
@@ -430,6 +527,31 @@ app.get("/api/admin/subscription-events", requireAuth, requireAdmin, async (req,
   }
 });
 
+app.get("/api/admin/usage", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    if (req.query.period === "all") {
+      return res.json({ period: "all", users: await getAdminApiUsage() });
+    }
+
+    const month = typeof req.query.month === "string"
+      ? req.query.month
+      : new Date().toISOString().slice(0, 7);
+    const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
+    if (!match) {
+      return res.status(400).json({ error: "month muss im Format YYYY-MM angegeben werden." });
+    }
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const startAt = new Date(Date.UTC(year, monthIndex, 1));
+    const endAt = new Date(Date.UTC(year, monthIndex + 1, 1));
+    res.json({ period: month, users: await getAdminApiUsage(startAt, endAt) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "API-Kosten konnten nicht geladen werden.", details: err?.message });
+  }
+});
+
 app.post("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -658,7 +780,8 @@ app.post("/api/ocr-preview", requireAuth, requireSubscription, async (req, res) 
     if (typeof image !== "string" || !image.startsWith("data:image/png;base64,")) {
       return res.status(400).json({ error: "image muss eine PNG Data-URL sein." });
     }
-    const recognized = await recognizeHandwriting(image);
+    const usageContext = createUsageContext(req);
+    const recognized = await recognizeHandwritingTracked(image, usageContext, "ocr_preview");
     res.json(recognized);
   } catch (err) {
     console.error("MathPix Live-Vorschau Fehler:", err);
@@ -680,16 +803,17 @@ app.post("/api/evaluate", requireEvaluationAccess, async (req, res) => {
     if (!problem) {
       return res.status(404).json({ error: "Unbekannte Aufgabe." });
     }
+    const usageContext = createUsageContext(req);
 
     // Konstruktionsaufgaben (siehe oben) werden komplett anders bewertet (Vision statt OCR/Algebra).
     if (problem.gradingType === "construction") {
-      const graded = await gradeConstruction(problem, image, hintsUsed);
+      const graded = await gradeConstruction(problem, image, hintsUsed, usageContext);
       return res.json(graded);
     }
 
     let recognized;
     try {
-      recognized = await recognizeHandwriting(image);
+      recognized = await recognizeHandwritingTracked(image, usageContext, "evaluation_ocr");
     } catch (err) {
       console.error("MathPix Fehler:", err);
       return res.status(502).json({ error: "Handschrifterkennung (MathPix) fehlgeschlagen.", details: err?.message });
@@ -699,7 +823,7 @@ app.post("/api/evaluate", requireEvaluationAccess, async (req, res) => {
     // und falsche Zahlengleichungen anhand echter Arithmetik/Algebra (mathjs).
     const deterministic = checkSteps(recognized.text);
 
-    const completion = await openai.chat.completions.create({
+    const completion = await createCompletionTracked({
       model: MODEL,
       temperature: 0,
       messages: [
@@ -757,7 +881,7 @@ app.post("/api/evaluate", requireEvaluationAccess, async (req, res) => {
         },
       ],
       response_format: { type: "json_object" },
-    });
+    }, usageContext);
 
     const raw = completion.choices[0]?.message?.content || "{}";
     let result;

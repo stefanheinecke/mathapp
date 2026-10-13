@@ -452,7 +452,7 @@ function restoreCanvasFromImage(dataUrl) {
 // Ruft MathPix NICHT bei jedem Strich auf, sondern erst nach einer kurzen Schreibpause
 // (Debounce), um die MathPix-Kosten im Rahmen zu halten. Rein informativ - Fehler hier duerfen
 // die eigentliche Aufgabe nicht stoeren.
-const LIVE_PREVIEW_DEBOUNCE_MS = 1200;
+const LIVE_PREVIEW_DEBOUNCE_MS = 5000;
 let livePreviewTimer = null;
 let livePreviewInFlight = false;
 
@@ -477,7 +477,7 @@ async function runLivePreview() {
     const { ok, data } = await api("/api/ocr-preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image }),
+      body: JSON.stringify({ image, activityType: getUsageActivityType() }),
     });
     const box = document.getElementById("live-preview");
     if (!ok || (!data.text && !data.latex)) {
@@ -730,6 +730,11 @@ const state = {
 // auswertet und Feedback zeigt.
 function isPruefungMode(mode) {
   return mode === "pruefung_jahr" || mode === "pruefung_kategorie";
+}
+
+function getUsageActivityType() {
+  if (state.mode === "demo") return "demo";
+  return isPruefungMode(state.mode) ? "pruefung" : "uebung";
 }
 
 // ---------- Level-System (10 Sterne pro Level, 100 Level = 1000 Sterne) ----------
@@ -1581,6 +1586,7 @@ submitBtn.addEventListener("click", async () => {
         image,
         hintsUsed: state.hintsUsedForCurrent,
         demo: state.mode === "demo",
+        activityType: getUsageActivityType(),
       }),
     });
     if (!ok) {
@@ -1773,7 +1779,12 @@ async function gradeAndFinishExam() {
     const { ok, data } = await api("/api/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemId: problem.id, image: answer.image, hintsUsed: answer.hintsUsed }),
+      body: JSON.stringify({
+        problemId: problem.id,
+        image: answer.image,
+        hintsUsed: answer.hintsUsed,
+        activityType: getUsageActivityType(),
+      }),
     });
     if (!ok) {
       state.results.push({
@@ -2546,6 +2557,132 @@ async function checkExistingSession() {
 // ---------- Admin: Benutzerverwaltung und Abo-Audit-Log ----------
 let adminSubscriptionEventsPage = 1;
 
+const adminUsdFormatter = new Intl.NumberFormat("de-CH", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+});
+
+function formatAdminUsd(value) {
+  const amount = Number(value);
+  return adminUsdFormatter.format(Number.isFinite(amount) ? amount : 0);
+}
+
+function initializeAdminUsagePeriods() {
+  const select = document.getElementById("admin-usage-period");
+  if (select.options.length) return;
+
+  const now = new Date();
+  for (let offset = 0; offset < 12; offset++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = date.toLocaleDateString("de-CH", { year: "numeric", month: "long" });
+    select.appendChild(option);
+  }
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "Gesamter Zeitraum";
+  select.appendChild(allOption);
+  select.addEventListener("change", renderAdminUsage);
+}
+
+async function renderAdminUsage() {
+  initializeAdminUsagePeriods();
+  const select = document.getElementById("admin-usage-period");
+  const summary = document.getElementById("admin-usage-summary");
+  const container = document.getElementById("admin-usage-list");
+  const query = select.value === "all" ? "period=all" : `month=${encodeURIComponent(select.value)}`;
+  container.textContent = "Lade Kostenübersicht …";
+  summary.textContent = "";
+  const { ok, data } = await api(`/api/admin/usage?${query}`);
+  if (!ok || !Array.isArray(data.users)) {
+    container.textContent = data.error || "Kostenübersicht konnte nicht geladen werden.";
+    return;
+  }
+
+  const totals = data.users.reduce((sum, user) => {
+    sum.exercise += Number(user.exercise_cost_usd) || 0;
+    sum.exam += Number(user.exam_cost_usd) || 0;
+    sum.demo += Number(user.demo_cost_usd) || 0;
+    sum.mathpix += Number(user.mathpix_cost_usd) || 0;
+    sum.openai += Number(user.openai_cost_usd) || 0;
+    sum.total += Number(user.total_cost_usd) || 0;
+    sum.unknown += Number(user.unknown_cost_calls) || 0;
+    return sum;
+  }, { exercise: 0, exam: 0, demo: 0, mathpix: 0, openai: 0, total: 0, unknown: 0 });
+  summary.textContent =
+    `Gesamt: ${formatAdminUsd(totals.total)} · Übungen: ${formatAdminUsd(totals.exercise)} · ` +
+    `Prüfungen: ${formatAdminUsd(totals.exam)} · Demo: ${formatAdminUsd(totals.demo)} · ` +
+    `Mathpix: ${formatAdminUsd(totals.mathpix)} · OpenAI: ${formatAdminUsd(totals.openai)} · ` +
+    `${totals.unknown} Aufrufe ohne genaue Kostenzuordnung`;
+
+  container.replaceChildren();
+  const table = document.createElement("table");
+  table.className = "admin-events-table";
+  const headers = [
+    "Benutzer",
+    "Übungs-Auswertungen",
+    "Übungskosten (USD)",
+    "Prüfungsaufgaben",
+    "Prüfungskosten (USD)",
+    "Demo-Kosten (USD)",
+    "Live-OCR-Aufrufe",
+    "Mathpix gesamt (USD)",
+    "OpenAI gesamt (USD)",
+    "Gesamt (USD)",
+    "Unklare Aufrufe",
+  ];
+  const headerRow = document.createElement("tr");
+  headers.forEach((label) => {
+    const cell = document.createElement("th");
+    cell.textContent = label;
+    headerRow.appendChild(cell);
+  });
+  const thead = document.createElement("thead");
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  if (data.users.length) {
+    data.users.forEach((user) => {
+      const row = document.createElement("tr");
+      [
+        user.username,
+        String(user.exercise_evaluations),
+        formatAdminUsd(user.exercise_cost_usd),
+        String(user.exam_evaluations),
+        formatAdminUsd(user.exam_cost_usd),
+        formatAdminUsd(user.demo_cost_usd),
+        String(user.live_ocr_calls),
+        formatAdminUsd(user.mathpix_cost_usd),
+        formatAdminUsd(user.openai_cost_usd),
+        formatAdminUsd(user.total_cost_usd),
+        String(user.unknown_cost_calls),
+      ].forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+      tbody.appendChild(row);
+    });
+  } else {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = headers.length;
+    cell.textContent = "Für diesen Zeitraum wurden noch keine Nutzer oder API-Aufrufe erfasst.";
+    row.appendChild(cell);
+    tbody.appendChild(row);
+  }
+  table.appendChild(tbody);
+  const wrapper = document.createElement("div");
+  wrapper.className = "admin-events-table-scroll";
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+}
+
 function renderAdminUserRow(u) {
   const row = document.createElement("div");
   row.className = "admin-user-row";
@@ -2741,7 +2878,7 @@ async function goToAdmin() {
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-admin");
   showScreen("screen-admin");
-  await Promise.all([renderAdminUsers(), renderSubscriptionEvents()]);
+  await Promise.all([renderAdminUsers(), renderSubscriptionEvents(), renderAdminUsage()]);
 }
 
 document.getElementById("nav-admin").addEventListener("click", goToAdmin);

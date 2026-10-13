@@ -422,6 +422,12 @@
     <section id="screen-admin" class="screen hidden">
       <h2>🔑 Admin: Benutzerverwaltung</h2>
       <div id="admin-users-list"></div>
+      <h3>KI-Kosten und Nutzung</h3>
+      <p>Kostenschätzung in USD nach den konfigurierten Providerpreisen. Übungs- und Prüfungskosten enthalten die zugehörige Live-OCR; Prüfungen werden pro bewerteter Aufgabe gezählt. Nicht genau abrechenbare fehlgeschlagene Aufrufe werden separat ausgewiesen. Die Erfassung beginnt mit dem Deploy dieser Funktion.</p>
+      <label for="admin-usage-period">Zeitraum:</label>
+      <select id="admin-usage-period"></select>
+      <p id="admin-usage-summary" aria-live="polite"></p>
+      <div id="admin-usage-list" class="admin-events-container"></div>
       <h3>Neuen Benutzer anlegen</h3>
       <label for="admin-new-username">Benutzername:</label>
       <input id="admin-new-username" type="text" maxlength="40" autocomplete="off" />

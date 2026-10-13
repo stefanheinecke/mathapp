@@ -98,6 +98,26 @@ export async function initDb() {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS subscription_events_created_idx ON subscription_events (created_at DESC, id DESC);`);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS api_usage (
+      id BIGSERIAL PRIMARY KEY,
+      username TEXT NOT NULL,
+      request_id UUID NOT NULL,
+      activity_type TEXT NOT NULL CHECK (activity_type IN ('uebung', 'pruefung', 'demo', 'sonstiges')),
+      provider TEXT NOT NULL CHECK (provider IN ('mathpix', 'openai')),
+      operation TEXT NOT NULL CHECK (operation IN ('ocr_preview', 'evaluation_ocr', 'evaluation_llm')),
+      model TEXT,
+      input_tokens INTEGER,
+      cached_input_tokens INTEGER,
+      output_tokens INTEGER,
+      cost_usd NUMERIC(18, 10),
+      status TEXT NOT NULL CHECK (status IN ('success', 'failed', 'unknown')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (request_id, provider, operation)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS api_usage_created_username_idx ON api_usage (created_at DESC, username);`);
+
   await ensureAdminUser();
 }
 
@@ -422,6 +442,92 @@ export async function listSubscriptionEvents(page = 1, pageSize = 10) {
   return { events, total, page: safePage, pageSize: safePageSize, totalPages: Math.ceil(total / safePageSize) };
 }
 
+export async function recordApiUsage({
+  username,
+  requestId,
+  activityType,
+  provider,
+  operation,
+  model = null,
+  inputTokens = null,
+  cachedInputTokens = null,
+  outputTokens = null,
+  costUsd = null,
+  status,
+}) {
+  await pool.query(
+    `INSERT INTO api_usage
+       (username, request_id, activity_type, provider, operation, model,
+        input_tokens, cached_input_tokens, output_tokens, cost_usd, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     ON CONFLICT (request_id, provider, operation) DO NOTHING`,
+    [
+      username,
+      requestId,
+      activityType,
+      provider,
+      operation,
+      model,
+      inputTokens,
+      cachedInputTokens,
+      outputTokens,
+      costUsd === null ? null : costUsd.toFixed(10),
+      status,
+    ]
+  );
+}
+
+export async function getAdminApiUsage(startAt = null, endAt = null) {
+  const { rows } = await pool.query(
+    `WITH usage AS (
+       SELECT username,
+         COUNT(DISTINCT request_id) FILTER (
+           WHERE operation IN ('evaluation_ocr', 'evaluation_llm')
+         )::int AS evaluations,
+         COUNT(DISTINCT request_id) FILTER (
+           WHERE activity_type = 'uebung' AND operation IN ('evaluation_ocr', 'evaluation_llm')
+         )::int AS exercise_evaluations,
+         COUNT(DISTINCT request_id) FILTER (
+           WHERE activity_type = 'pruefung' AND operation IN ('evaluation_ocr', 'evaluation_llm')
+         )::int AS exam_evaluations,
+         COUNT(*) FILTER (WHERE operation = 'ocr_preview')::int AS live_ocr_calls,
+         COALESCE(SUM(cost_usd) FILTER (WHERE activity_type = 'uebung'), 0)::numeric(18, 10) AS exercise_cost_usd,
+         COALESCE(SUM(cost_usd) FILTER (WHERE activity_type = 'pruefung'), 0)::numeric(18, 10) AS exam_cost_usd,
+         COALESCE(SUM(cost_usd) FILTER (WHERE activity_type = 'demo'), 0)::numeric(18, 10) AS demo_cost_usd,
+         COALESCE(SUM(cost_usd) FILTER (WHERE provider = 'mathpix'), 0)::numeric(18, 10) AS mathpix_cost_usd,
+         COALESCE(SUM(cost_usd) FILTER (WHERE provider = 'openai'), 0)::numeric(18, 10) AS openai_cost_usd,
+         COALESCE(SUM(cost_usd), 0)::numeric(18, 10) AS total_cost_usd,
+         COUNT(*) FILTER (WHERE cost_usd IS NULL)::int AS unknown_cost_calls
+       FROM api_usage
+       WHERE ($1::timestamptz IS NULL OR created_at >= $1)
+         AND ($2::timestamptz IS NULL OR created_at < $2)
+       GROUP BY username
+     ),
+     usernames AS (
+       SELECT username FROM users
+       UNION
+       SELECT username FROM usage
+     )
+     SELECT usernames.username,
+       COALESCE(usage.evaluations, 0)::int AS evaluations,
+       COALESCE(usage.exercise_evaluations, 0)::int AS exercise_evaluations,
+       COALESCE(usage.exam_evaluations, 0)::int AS exam_evaluations,
+       COALESCE(usage.live_ocr_calls, 0)::int AS live_ocr_calls,
+       COALESCE(usage.exercise_cost_usd, 0)::text AS exercise_cost_usd,
+       COALESCE(usage.exam_cost_usd, 0)::text AS exam_cost_usd,
+       COALESCE(usage.demo_cost_usd, 0)::text AS demo_cost_usd,
+       COALESCE(usage.mathpix_cost_usd, 0)::text AS mathpix_cost_usd,
+       COALESCE(usage.openai_cost_usd, 0)::text AS openai_cost_usd,
+       COALESCE(usage.total_cost_usd, 0)::text AS total_cost_usd,
+       COALESCE(usage.unknown_cost_calls, 0)::int AS unknown_cost_calls
+     FROM usernames
+     LEFT JOIN usage ON usage.username = usernames.username
+     ORDER BY COALESCE(usage.total_cost_usd, 0) DESC, usernames.username`,
+    [startAt, endAt]
+  );
+  return rows;
+}
+
 export async function activateSubscription(username, currentPeriodEnd, gatewayId, subscriptionId = null) {
   const client = await pool.connect();
   try {
@@ -473,4 +579,3 @@ export async function activateSubscription(username, currentPeriodEnd, gatewayId
     client.release();
   }
 }
-
