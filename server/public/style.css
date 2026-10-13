@@ -357,6 +357,7 @@ h1 {
   letter-spacing: -0.02em;
   margin: 0 0 0.6rem;
   color: var(--ink);
+  max-width: 17ch;
 }
 
 .hero-sub {
@@ -364,6 +365,53 @@ h1 {
   font-size: 1.05rem;
   margin: 0 0 1.25rem;
   max-width: 480px;
+}
+
+.hero-sticky-note {
+  position: relative;
+  width: fit-content;
+  max-width: min(100%, 500px);
+  margin: 1.2rem 0 1.4rem 0.35rem;
+  padding: 1rem 1.25rem;
+  transform: rotate(-1deg);
+  border: 1px solid #edda82;
+  border-left: 5px solid var(--accent);
+  border-radius: 4px 3px 7px 3px;
+  background: #fff4b8;
+  box-shadow: 0 8px 18px rgba(44, 35, 15, 0.14);
+  color: #38321d;
+}
+
+.hero-sticky-note::before {
+  position: absolute;
+  top: -0.55rem;
+  left: 42%;
+  width: 5rem;
+  height: 1.2rem;
+  transform: rotate(-2deg);
+  background: rgba(243, 83, 213, 0.28);
+  content: "";
+}
+
+.hero-sticky-note-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #6d238d;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.hero-sticky-note p {
+  margin: 0;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.hero-sticky-note strong {
+  font-size: 1.05rem;
 }
 
 .hero-actions {
@@ -508,6 +556,12 @@ h1 {
 
   .hero-sub {
     max-width: none;
+  }
+
+  .hero-sticky-note {
+    margin-right: auto;
+    margin-left: auto;
+    text-align: left;
   }
 }
 
