@@ -2170,7 +2170,7 @@ function showApp() {
   document.getElementById("app-layout").classList.remove("hidden");
   const isLoggedIn = Boolean(state.token && state.username);
   document.getElementById("hero-sub").textContent = isLoggedIn
-    ? "Willkommen zurück! Wähle einen Modus, um loszulegen."
+    ? "Wähle einen Modus, um loszulegen."
     : "Melde dich an, um zu üben und deine Ergebnisse anzusehen.";
   document.getElementById("logged-in-as").textContent = isLoggedIn ? `Angemeldet als: ${state.username}` : "";
   document.getElementById("logged-in-as").classList.toggle("hidden", !isLoggedIn);
