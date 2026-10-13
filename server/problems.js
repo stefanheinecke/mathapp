@@ -1,6 +1,7 @@
+import { PROBLEMS_2025 } from "./problems_2025.js";
 import { PROBLEMS_2026 } from "./problems_2026.js";
 
-export const PROBLEMS = [...PROBLEMS_2026];
+export const PROBLEMS = [...PROBLEMS_2025, ...PROBLEMS_2026];
 
 export function findProblem(id) {
   return PROBLEMS.find((p) => p.id === id);
