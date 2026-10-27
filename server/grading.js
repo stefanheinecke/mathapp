@@ -14,6 +14,13 @@ export function hasFinalFractionResult(recognized, numerator, denominator) {
   });
 }
 
+export function calculateAwardedPoints(points, resultCorrect, pathState, hintsUsed = false) {
+  if (hintsUsed) return 0;
+  if (resultCorrect) return points;
+  if (pathState === "correct") return points / 2;
+  return 0;
+}
+
 // Verifiziert den konkret dokumentierten Rechenweg der Aufgabe 2026-1a2 algebraisch. Der
 // Modellgrader verwechselt bei handschriftlichem x^2/x gelegentlich die gekuerzte Potenz.
 export function hasCorrect2026_1a2Derivation(recognized) {

@@ -1,10 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  calculateAwardedPoints,
   hasCorrect2026_1a2Derivation,
   hasCorrect2026_3bDerivation,
   hasFinalFractionResult,
 } from "../grading.js";
+
+test("awards full points for a correct final answer despite an incorrect path", () => {
+  assert.equal(calculateAwardedPoints(1, true, "incorrect"), 1);
+});
+
+test("awards half points for an incorrect final answer with a correct path", () => {
+  assert.equal(calculateAwardedPoints(1, false, "correct"), 0.5);
+});
+
+test("awards no points for an incorrect answer and path", () => {
+  assert.equal(calculateAwardedPoints(1, false, "incorrect"), 0);
+  assert.equal(calculateAwardedPoints(1, false, "missing"), 0);
+});
+
+test("hints still prevent points even when the final answer is correct", () => {
+  assert.equal(calculateAwardedPoints(1, true, "incorrect", true), 0);
+});
 
 test("recognizes 1/3 as the final OCR answer", () => {
   assert.equal(

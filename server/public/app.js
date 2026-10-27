@@ -1930,7 +1930,7 @@ async function loadProfile() {
   payrexxManagementLink.classList.toggle("hidden", !(sub.status === "active" && sub.payrexxGatewayLink));
   if (paidAccessActive) {
     const cancellationPending = ["cancelled", "in_notice"].includes(sub.status);
-    planEl.textContent = cancellationPending ? "MathQuiz Abo (gekündigt)" : "MathQuiz Abo (CHF 1.-/Monat)";
+    planEl.textContent = cancellationPending ? "MathQuiz Abo (gekündigt)" : "MathQuiz Abo (CHF 19.90/Monat)";
     sinceEl.textContent = sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("de-CH") : "–";
     noteEl.textContent = cancellationPending
       ? `Keine weitere Abbuchung. Zugang bis ${periodEnd.toLocaleDateString("de-CH")}.`

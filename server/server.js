@@ -37,6 +37,7 @@ import {
 } from "./payrexx.js";
 import { isTrialActive, getTrialEndsAt } from "./trial.js";
 import {
+  calculateAwardedPoints,
   hasCorrect2026_1a2Derivation,
   hasCorrect2026_3bDerivation,
   hasFinalFractionResult,
@@ -324,7 +325,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Uebungsmodus, Pruefungsmodus und Ergebnisse verlangen ein aktives Abo (CHF 1.-/Monat via
+// Uebungsmodus, Pruefungsmodus und Ergebnisse verlangen ein aktives Abo (CHF 19.90/Monat via
 // Payrexx) ODER eine noch laufende 3-taegige Testphase ab Kontoerstellung - der Admin-Account
 // ist davon ausgenommen, damit "Stefan" die App immer verwalten kann. Im AUTH_BYPASS-Modus
 // (Payrexx-Kontovalidierung) ebenfalls ausgenommen, sonst saehe der Pruefer trotz Bypass eine
@@ -336,7 +337,7 @@ async function requireSubscription(req, res, next) {
     const user = await findUserByUsername(req.user.username);
     if (user && isTrialActive(user.created_at)) return next();
     return res.status(402).json({
-      error: "Fuer diese Funktion ist ein aktives Abo (CHF 1.-/Monat) erforderlich.",
+      error: "Fuer diese Funktion ist ein aktives Abo (CHF 19.90/Monat) erforderlich.",
       subscriptionRequired: true,
     });
   } catch (err) {
@@ -612,7 +613,7 @@ app.get("/api/meta", requireAuth, (_req, res) => {
   res.json({ years: listYears(), categories: listCategories() });
 });
 
-// ---------- Abo (Payrexx, CHF 1.-/Monat) ----------
+// ---------- Abo (Payrexx, CHF 19.90/Monat) ----------
 // "active" beruecksichtigt sowohl ein bezahltes Abo als auch die 3-taegige Testphase ab
 // Kontoerstellung - das Frontend muss dadurch nicht zwischen beidem unterscheiden, um die
 // Navigation freizuschalten; trialEndsAt/trialActive dienen nur der Anzeige im Trial-Banner.
@@ -913,11 +914,8 @@ app.post("/api/evaluate", requireEvaluationAccess, async (req, res) => {
       ((Boolean(result.pathCorrect) && !hasInvalidStep) || verified2026_1a2Derivation || verified2026_3bDerivation) &&
       deterministic.ok;
 
-    // Punktevergabe: volle Punktzahl, sobald das Endergebnis korrekt ist (unabhaengig davon, ob
-    // ueberhaupt ein Rechenweg gezeigt wurde) - AUSSER der gezeigte Rechenweg enthaelt nachweislich
-    // einen Fehler; dann gibt es 0 Punkte, auch wenn das Endergebnis zufaellig richtig dasteht.
-    // Ist das Endergebnis falsch/fehlt, aber der gezeigte Rechenweg ist fuer sich korrekt, gibt es
-    // einen halben Punkt fuer den richtigen Ansatz.
+    // Ein korrektes Endergebnis gibt volle Punkte, auch wenn ein Zwischenschritt falsch ist.
+    // Ist das Ergebnis falsch/fehlt, gibt es bei korrektem Rechenweg einen halben Punkt.
     const points = typeof problem.points === "number" ? problem.points : 1;
     const pathState =
       !(hasPath || verified2026_1a2Derivation || verified2026_3bDerivation)
@@ -925,16 +923,7 @@ app.post("/api/evaluate", requireEvaluationAccess, async (req, res) => {
         : pathCorrect
           ? "correct"
           : "incorrect";
-    let awarded;
-    if (pathState === "incorrect") {
-      awarded = 0;
-    } else if (resultCorrect) {
-      awarded = points;
-    } else if (pathState === "correct") {
-      awarded = points / 2;
-    } else {
-      awarded = 0;
-    }
+    let awarded = calculateAwardedPoints(points, resultCorrect, pathState, hintsUsed);
     // Wer Hinweise angefordert hat, bekommt fuer diese Aufgabe 0 Punkte - unabhaengig davon, ob das
     // Ergebnis am Ende richtig ist. Der Rechenweg/das Ergebnis selbst wird trotzdem normal bewertet
     // und im Feedback erwaehnt.

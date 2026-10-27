@@ -59,7 +59,7 @@ export async function initDb() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`);
 
-  // Ein Abo pro Nutzer (CHF 1.-/Monat via Payrexx). referenceId der Payrexx-Zahlung ist immer der
+  // Ein Abo pro Nutzer (CHF 19.90/Monat via Payrexx). referenceId der Payrexx-Zahlung ist immer der
   // Benutzername, dadurch kann der Webhook die Zeile direkt finden, ohne eine zusaetzliche Tabelle.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS subscriptions (
@@ -259,7 +259,7 @@ export async function awardExerciseBonusStar(playerName, resultId) {
   return rows.length > 0;
 }
 
-// ---------- Abo (Payrexx, CHF 1.-/Monat) ----------
+// ---------- Abo (Payrexx, CHF 19.90/Monat) ----------
 
 // Liefert den Abo-Status fuers Frontend. Bei Payrexx-Status "in_notice" ist die Verlaengerung
 // gestoppt, der Zugang bleibt aber bis zum Ende der bezahlten Periode aktiv.
