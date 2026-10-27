@@ -1921,13 +1921,10 @@ async function loadProfile() {
   const sinceEl = document.getElementById("profile-plan-since");
   const noteEl = document.getElementById("profile-plan-note");
   const cancelButton = document.getElementById("btn-profile-cancel-subscription");
-  const payrexxManagementLink = document.getElementById("profile-payrexx-management-link");
   const sub = data.subscription;
   const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
   const paidAccessActive = periodEnd && periodEnd > new Date() && ["active", "in_notice", "cancelled"].includes(sub.status);
-  cancelButton.classList.toggle("hidden", !(sub.status === "active" && paidAccessActive && sub.payrexxSubscriptionId));
-  payrexxManagementLink.href = sub.payrexxGatewayLink || "#";
-  payrexxManagementLink.classList.toggle("hidden", !(sub.status === "active" && sub.payrexxGatewayLink));
+  cancelButton.classList.toggle("hidden", !(sub.status === "active" && paidAccessActive));
   if (paidAccessActive) {
     const cancellationPending = ["cancelled", "in_notice"].includes(sub.status);
     planEl.textContent = cancellationPending ? "MathQuiz Abo (gekündigt)" : "MathQuiz Abo (CHF 19.90/Monat)";
@@ -1961,21 +1958,36 @@ async function loadProfile() {
 }
 
 document.getElementById("btn-profile-cancel-subscription").addEventListener("click", async () => {
-  if (!confirm("Payrexx verwaltet dieses Abo. Du kannst die automatische Verlängerung im Payrexx-Kundenkonto unter «Abonnemente» → «Stop Renewal» beenden. Möchtest du fortfahren?")) return;
+  if (!confirm("Möchtest du die automatische Verlängerung deines Abos beenden?")) return;
+  const cancelButton = document.getElementById("btn-profile-cancel-subscription");
   const statusEl = document.getElementById("profile-subscription-action-status");
   statusEl.classList.remove("hidden");
-  statusEl.textContent = "Kündigungswunsch wird protokolliert …";
-  const { ok, data } = await api("/api/subscription/cancel", { method: "POST" });
-  if (!ok || !data.requestRecorded) {
-    statusEl.textContent = data.error || "Kündigungswunsch konnte nicht protokolliert werden.";
-    return;
-  }
-  const managementLink = document.getElementById("profile-payrexx-management-link");
-  if (managementLink.href && managementLink.href !== window.location.href && !managementLink.classList.contains("hidden")) {
-    statusEl.textContent = "Kündigungswunsch gespeichert. Bitte wähle im Payrexx-Kundenkonto bei deinem Abo «Stop Renewal», um die Verlängerung zu beenden.";
-    window.open(managementLink.href, "_blank", "noopener,noreferrer");
-  } else {
-    statusEl.textContent = "Kündigungswunsch gespeichert. Öffne die Payrexx-Bestätigungs-E-Mail, melde dich über den darin enthaltenen Link an und wähle «Abonnemente» → «Stop Renewal».";
+  statusEl.textContent = "Deine Kündigung wird verarbeitet …";
+  cancelButton.disabled = true;
+  try {
+    const { ok, data } = await api("/api/subscription/cancel", { method: "POST" });
+    if (!ok) {
+      statusEl.textContent = data.error || "Die Kündigung konnte nicht verarbeitet werden.";
+      return;
+    }
+    const periodEnd = data.currentPeriodEnd
+      ? new Date(data.currentPeriodEnd).toLocaleDateString("de-CH")
+      : null;
+    if (data.cancelled) {
+      statusEl.textContent = periodEnd
+        ? `Your subscription will not renew. You can continue using MathQuiz until ${periodEnd}.`
+        : "Your subscription will not renew. Your access will continue through the end of your paid period.";
+      await loadProfile();
+      return;
+    }
+    if (data.manualFollowUp) {
+      const accessMessage = periodEnd ? ` Du kannst MathQuiz bis ${periodEnd} weiter nutzen.` : "";
+      statusEl.textContent = `Dein Kündigungswunsch wurde zur manuellen Bearbeitung vorgemerkt.${accessMessage} Wir bestätigen dir, sobald die Kündigung abgeschlossen ist.`;
+      return;
+    }
+    statusEl.textContent = data.error || "Die Kündigung konnte nicht verarbeitet werden.";
+  } finally {
+    cancelButton.disabled = false;
   }
 });
 
@@ -2242,7 +2254,7 @@ function showApp() {
 }
 
 function requireLogin(afterLogin) {
-  if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Payrexx-Pruefung)
+  if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Pruefung)
   if (state.token && state.username) return true;
   pendingAfterLogin = afterLogin;
   showLoginScreen();
@@ -2306,7 +2318,7 @@ document.getElementById("btn-register").addEventListener("click", async () => {
 // Stand zu nutzen - sonst zeigt die Testphasen-Anzeige nach einer Zahlung faelschlich weiter an,
 // bis der Nutzer sich neu einloggt.
 async function requireSubscription(navId) {
-  if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Payrexx-Pruefung)
+  if (window.AUTH_BYPASS) return true; // TEMPORAER: siehe AUTH_BYPASS in server.js (Pruefung)
   if (state.isAdmin) return true;
   await refreshSubscriptionStatus();
   if (state.subscriptionActive) return true;
@@ -2338,7 +2350,7 @@ function renderTrialBanner(data) {
 }
 
 
-// Erstellt ein Payrexx-Checkout und leitet dorthin weiter - gemeinsam genutzt vom Abo-Pflicht-
+// Erstellt ein Zahlungs-Checkout und leitet dorthin weiter - gemeinsam genutzt vom Abo-Pflicht-
 // Bildschirm (Uebung/Pruefung/Ergebnisse ohne Abo) und vom "Jetzt starten"-Knopf auf der
 // Preise-Seite.
 async function startSubscriptionCheckout(btn, statusEl) {
@@ -2443,10 +2455,10 @@ document.getElementById("btn-pricing-free").addEventListener("click", () => {
   showRegisterScreen("free");
 });
 
-// Nach der Rueckkehr von Payrexx (Redirect-URL enthaelt ?subscription=success|failed|cancelled):
+// Nach der Rueckkehr vom Zahlungsdienst (Redirect-URL enthaelt ?subscription=success|failed|cancelled):
 // der Webhook, der das Abo in Postgres aktiviert, kann ein paar Sekunden hinter dem Redirect
 // zurueckliegen - deshalb den Status kurz pollen statt nur einmal abzufragen.
-async function handlePayrexxRedirect() {
+async function handleSubscriptionRedirect() {
   const params = new URLSearchParams(window.location.search);
   const result = params.get("subscription");
   if (!result) return;
@@ -2770,12 +2782,86 @@ const SUBSCRIPTION_EVENT_LABELS = {
   subscription_deleted: "Abo gelöscht",
 };
 
+async function renderAdminTasks() {
+  const container = document.getElementById("admin-pending-tasks");
+  container.textContent = "Lade offene Aufgaben …";
+  const { ok, data } = await api("/api/admin/tasks");
+  if (!ok || !Array.isArray(data)) {
+    container.textContent = data.error || "Offene Aufgaben konnten nicht geladen werden.";
+    return;
+  }
+
+  container.replaceChildren();
+  const table = document.createElement("table");
+  table.className = "admin-events-table";
+  const header = document.createElement("tr");
+  ["Erstellt", "Benutzer", "Aufgabe", "E-Mail-Benachrichtigung", "Aktion"].forEach((label) => {
+    const cell = document.createElement("th");
+    cell.textContent = label;
+    header.appendChild(cell);
+  });
+  const thead = document.createElement("thead");
+  thead.appendChild(header);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  if (data.length) {
+    data.forEach((task) => {
+      const row = document.createElement("tr");
+      [
+        new Date(task.created_at).toLocaleString("de-CH"),
+        task.username,
+        `${task.details?.reason || "Kündigung manuell bearbeiten"}${task.details?.error ? ` Fehler: ${task.details.error}` : ""}`,
+        task.notification_status === "sent"
+          ? "Gesendet"
+          : task.notification_status === "failed"
+            ? `Fehlgeschlagen${task.notification_error ? `: ${task.notification_error}` : ""}`
+            : "Ausstehend",
+      ].forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+      const actionCell = document.createElement("td");
+      const completeButton = document.createElement("button");
+      completeButton.className = "btn-secondary";
+      completeButton.type = "button";
+      completeButton.textContent = "Als erledigt markieren";
+      completeButton.addEventListener("click", async () => {
+        completeButton.disabled = true;
+        const result = await api(`/api/admin/tasks/${encodeURIComponent(task.id)}/complete`, { method: "POST" });
+        if (!result.ok) {
+          completeButton.disabled = false;
+          alert(result.data.error || "Aufgabe konnte nicht abgeschlossen werden.");
+          return;
+        }
+        await renderAdminTasks();
+      });
+      actionCell.appendChild(completeButton);
+      row.appendChild(actionCell);
+      tbody.appendChild(row);
+    });
+  } else {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 5;
+    cell.textContent = "Keine offenen Aufgaben.";
+    row.appendChild(cell);
+    tbody.appendChild(row);
+  }
+  table.appendChild(tbody);
+  const wrapper = document.createElement("div");
+  wrapper.className = "admin-events-table-scroll";
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+}
+
 function formatSubscriptionEventState(value) {
   if (!value) return "–";
   const parts = [value.status || "Status unbekannt"];
   if (value.currentPeriodEnd) parts.push(`bis ${new Date(value.currentPeriodEnd).toLocaleDateString("de-CH")}`);
   if (value.gatewayId) parts.push(`Gateway ${value.gatewayId}`);
-  if (value.subscriptionId) parts.push(`Payrexx-Abo ${value.subscriptionId}`);
+  if (value.subscriptionId) parts.push(`Abo-ID ${value.subscriptionId}`);
   return parts.join(" · ");
 }
 
@@ -2795,7 +2881,7 @@ function renderSubscriptionEventRow(event) {
   const change = document.createElement("td");
   change.textContent = `${formatSubscriptionEventState(event.old_state)} → ${formatSubscriptionEventState(event.new_state)}`;
   const detailParts = [];
-  if (event.details?.payrexxStatus) detailParts.push(`Payrexx: ${event.details.payrexxStatus}`);
+  if (event.details?.paymentStatus) detailParts.push(`Zahlungsstatus: ${event.details.paymentStatus}`);
   if (event.details?.gatewayId) detailParts.push(`Gateway ${event.details.gatewayId}`);
   if (event.details?.reason) detailParts.push(event.details.reason);
   if (event.details?.nextStep) detailParts.push(`Nächster Schritt: ${event.details.nextStep}`);
@@ -2878,7 +2964,7 @@ async function goToAdmin() {
   if (!confirmLeaveTask()) return;
   setActiveNav("nav-admin");
   showScreen("screen-admin");
-  await Promise.all([renderAdminUsers(), renderSubscriptionEvents(), renderAdminUsage()]);
+  await Promise.all([renderAdminUsers(), renderAdminTasks(), renderSubscriptionEvents(), renderAdminUsage()]);
 }
 
 document.getElementById("nav-admin").addEventListener("click", goToAdmin);
@@ -2906,5 +2992,5 @@ document.getElementById("btn-admin-create-user").addEventListener("click", async
 // ---------- Initialisierung ----------
 (async () => {
   await checkExistingSession();
-  await handlePayrexxRedirect();
+  await handleSubscriptionRedirect();
 })();

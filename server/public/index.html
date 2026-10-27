@@ -256,7 +256,7 @@
           <ul class="pricing-features">
             <li>Alles aus der Testphase</li>
             <li>Monatlich kündbar</li>
-            <li>Bezahlung sicher über Payrexx</li>
+            <li>Sichere monatliche Zahlung</li>
           </ul>
           <button id="btn-pricing-subscribe" class="pricing-cta">Jetzt starten</button>
         </div>
@@ -422,6 +422,9 @@
     <section id="screen-admin" class="screen hidden">
       <h2>🔑 Admin: Benutzerverwaltung</h2>
       <div id="admin-users-list"></div>
+      <h3>Offene Aufgaben</h3>
+      <p>Hier findest du manuell zu bearbeitende Vorgänge.</p>
+      <div id="admin-pending-tasks" class="admin-events-container"></div>
       <h3>KI-Kosten und Nutzung</h3>
       <p>Kostenschätzung in USD nach den konfigurierten Providerpreisen. Übungs- und Prüfungskosten enthalten die zugehörige Live-OCR; Prüfungen werden pro bewerteter Aufgabe gezählt. Nicht genau abrechenbare fehlgeschlagene Aufrufe werden separat ausgewiesen. Die Erfassung beginnt mit dem Deploy dieser Funktion.</p>
       <label for="admin-usage-period">Zeitraum:</label>
@@ -496,7 +499,6 @@
           <p id="profile-plan-note" class="profile-plan-note"></p>
           <p><strong>⭐ Gesammelte Sterne:</strong> <span id="profile-stars"></span></p>
           <p id="profile-subscription-action-status" class="profile-plan-note hidden" role="status"></p>
-          <a id="profile-payrexx-management-link" class="profile-payrexx-management-link hidden" target="_blank" rel="noopener noreferrer">Payrexx-Kundenkonto öffnen</a>
           <button id="btn-profile-cancel-subscription" class="btn-danger hidden" type="button">Abo kündigen</button>
         </div>
       </div>

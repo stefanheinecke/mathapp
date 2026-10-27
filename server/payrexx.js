@@ -2,6 +2,7 @@
 // Authentifizierung per X-API-KEY-Header (siehe Payrexx-Doku "Authentication - X-API-KEY"),
 // dadurch entfaellt die manuelle HMAC-Signaturberechnung.
 const PAYREXX_API_BASE = "https://api.payrexx.com/v1.0";
+const PAYREXX_SUBSCRIPTION_API_BASE = "https://api.payrexx.com/v1.18";
 export const SUBSCRIPTION_AMOUNT_CENTS = 1990; // CHF 19.90
 export const SUBSCRIPTION_CURRENCY = "CHF";
 
@@ -14,9 +15,9 @@ function getConfig() {
   return { instance, apiSecret };
 }
 
-async function payrexxRequest(method, path, params) {
+async function payrexxRequest(method, path, params, apiBase = PAYREXX_API_BASE) {
   const { instance, apiSecret } = getConfig();
-  const url = `${PAYREXX_API_BASE}${path}?instance=${encodeURIComponent(instance)}`;
+  const url = `${apiBase}${path}?instance=${encodeURIComponent(instance)}`;
   const options = { method, headers: { "X-API-KEY": apiSecret } };
   if (params && method !== "GET") {
     options.headers["Content-Type"] = "application/x-www-form-urlencoded";
@@ -59,4 +60,17 @@ export async function retrieveTransaction(transactionId) {
 // "subscription"-Webhook-Payload statt eines "transaction"-Payloads.
 export async function retrieveSubscription(subscriptionId) {
   return payrexxRequest("GET", `/Subscription/${encodeURIComponent(subscriptionId)}/`);
+}
+
+export async function cancelSubscription(subscriptionId) {
+  const subscription = await payrexxRequest(
+    "DELETE",
+    `/Subscription/${encodeURIComponent(subscriptionId)}/`,
+    undefined,
+    PAYREXX_SUBSCRIPTION_API_BASE
+  );
+  if (subscription?.status !== "cancelled") {
+    throw new Error("Subscription cancellation was not confirmed by the billing service.");
+  }
+  return subscription;
 }

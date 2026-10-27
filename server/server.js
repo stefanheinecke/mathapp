@@ -20,11 +20,17 @@ import {
   updateProfile,
   deleteUser,
   getSubscriptionStatus,
+  getSubscriptionCancellationData,
   isSubscriptionActive,
   upsertPendingSubscription,
   activateSubscription,
   deactivateSubscription,
   recordSubscriptionCancellationRequest,
+  completeSubscriptionCancellation,
+  createPendingCancellationTask,
+  updateCancellationTaskNotification,
+  listPendingAdminTasks,
+  completeAdminTask,
   listSubscriptionEvents,
   recordApiUsage,
   getAdminApiUsage,
@@ -32,9 +38,11 @@ import {
 import { verifyPassword, createToken, verifyToken, isLoginRateLimited, recordFailedLogin, clearFailedLogins } from "./auth.js";
 import {
   createSubscriptionGateway,
+  cancelSubscription,
   retrieveTransaction,
   retrieveSubscription,
 } from "./payrexx.js";
+import { sendCancellationAlert } from "./email.js";
 import { isTrialActive, getTrialEndsAt } from "./trial.js";
 import {
   calculateAwardedPoints,
@@ -528,6 +536,30 @@ app.get("/api/admin/subscription-events", requireAuth, requireAdmin, async (req,
   }
 });
 
+app.get("/api/admin/tasks", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    res.json(await listPendingAdminTasks());
+  } catch (err) {
+    console.error("Admin-Aufgaben konnten nicht geladen werden:", err);
+    res.status(500).json({ error: "Offene Aufgaben konnten nicht geladen werden." });
+  }
+});
+
+app.post("/api/admin/tasks/:id/complete", requireAuth, requireAdmin, async (req, res) => {
+  const taskId = Number(req.params.id);
+  if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+    return res.status(400).json({ error: "Ungültige Aufgaben-ID." });
+  }
+  try {
+    const completed = await completeAdminTask(taskId, req.user.username);
+    if (!completed) return res.status(404).json({ error: "Offene Aufgabe nicht gefunden." });
+    res.json({ completed: true });
+  } catch (err) {
+    console.error("Admin-Aufgabe konnte nicht abgeschlossen werden:", err);
+    res.status(500).json({ error: "Aufgabe konnte nicht abgeschlossen werden." });
+  }
+});
+
 app.get("/api/admin/usage", requireAuth, requireAdmin, async (req, res) => {
   try {
     if (req.query.period === "all") {
@@ -663,12 +695,66 @@ app.post("/api/subscription/checkout", requireAuth, async (req, res) => {
 });
 
 app.post("/api/subscription/cancel", requireAuth, async (req, res) => {
+  let subscriptionStatus = null;
   try {
+    subscriptionStatus = await getSubscriptionStatus(req.user.username);
+    const cancellationData = await getSubscriptionCancellationData(req.user.username);
+    if (!subscriptionStatus.active || subscriptionStatus.status !== "active") {
+      return res.status(409).json({ error: "Es wurde kein kündbares Abo gefunden." });
+    }
     await recordSubscriptionCancellationRequest(req.user.username);
-    res.status(202).json({ requestRecorded: true });
+    if (!subscriptionStatus.currentPeriodEnd || !Number.isFinite(new Date(subscriptionStatus.currentPeriodEnd).getTime())) {
+      throw new Error("Current subscription period end is unavailable.");
+    }
+    if (!cancellationData.subscriptionId) {
+      throw new Error("Subscription identifier is unavailable.");
+    }
+    await cancelSubscription(cancellationData.subscriptionId);
+    const currentPeriodEnd = await completeSubscriptionCancellation(req.user.username);
+    if (!currentPeriodEnd || !Number.isFinite(new Date(currentPeriodEnd).getTime())) {
+      throw new Error("Cancelled subscription period end could not be confirmed.");
+    }
+    res.json({ cancelled: true, currentPeriodEnd });
   } catch (err) {
-    console.error("Abo-Kuendigungswunsch konnte nicht protokolliert werden:", err);
-    res.status(500).json({ error: "Kündigungswunsch konnte nicht protokolliert werden." });
+    console.error("Subscription cancellation failed:", { username: req.user.username, error: err });
+    let task = null;
+    try {
+      task = await createPendingCancellationTask(req.user.username, String(err?.message || err));
+    } catch (taskError) {
+      console.error("Manual cancellation task could not be created:", taskError);
+    }
+
+    let emailSent = task?.notification_status === "sent";
+    let emailErrorMessage = null;
+    if (!emailSent) {
+      try {
+        await sendCancellationAlert({
+          username: req.user.username,
+          currentPeriodEnd: subscriptionStatus?.currentPeriodEnd,
+          errorMessage: String(err?.message || err),
+        });
+        emailSent = true;
+      } catch (emailError) {
+        emailErrorMessage = String(emailError?.message || emailError);
+        console.error("Cancellation alert email could not be sent:", emailError);
+      }
+    }
+
+    if (task && task.notification_status !== "sent") {
+      try {
+        await updateCancellationTaskNotification(task.id, emailSent ? "sent" : "failed", emailErrorMessage);
+      } catch (notificationError) {
+        console.error("Cancellation task notification status could not be saved:", notificationError);
+      }
+    }
+
+    if (!task) {
+      return res.status(500).json({ error: "Die Kündigung konnte nicht abgeschlossen werden. Bitte kontaktiere den Support." });
+    }
+    return res.status(202).json({
+      manualFollowUp: true,
+      currentPeriodEnd: subscriptionStatus?.currentPeriodEnd || null,
+    });
   }
 });
 

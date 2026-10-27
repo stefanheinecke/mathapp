@@ -99,6 +99,27 @@ export async function initDb() {
   await pool.query(`CREATE INDEX IF NOT EXISTS subscription_events_created_idx ON subscription_events (created_at DESC, id DESC);`);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_tasks (
+      id BIGSERIAL PRIMARY KEY,
+      task_type TEXT NOT NULL,
+      username TEXT NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+      notification_status TEXT NOT NULL DEFAULT 'pending' CHECK (notification_status IN ('pending', 'sent', 'failed')),
+      notification_error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ,
+      completed_by TEXT
+    );
+  `);
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS admin_tasks_one_pending_idx
+     ON admin_tasks (task_type, username) WHERE status = 'pending'`
+  );
+  await pool.query(`CREATE INDEX IF NOT EXISTS admin_tasks_pending_created_idx ON admin_tasks (created_at DESC) WHERE status = 'pending';`);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS api_usage (
       id BIGSERIAL PRIMARY KEY,
       username TEXT NOT NULL,
@@ -265,7 +286,7 @@ export async function awardExerciseBonusStar(playerName, resultId) {
 // gestoppt, der Zugang bleibt aber bis zum Ende der bezahlten Periode aktiv.
 export async function getSubscriptionStatus(username) {
   const { rows } = await pool.query(
-    "SELECT status, current_period_end, started_at, payrexx_subscription_id, payrexx_gateway_link FROM subscriptions WHERE username = $1",
+    "SELECT status, current_period_end, started_at FROM subscriptions WHERE username = $1",
     [username]
   );
   const row = rows[0];
@@ -280,9 +301,15 @@ export async function getSubscriptionStatus(username) {
     status: row?.status || "inactive",
     currentPeriodEnd: row?.current_period_end || null,
     startedAt: row?.started_at || null,
-    payrexxSubscriptionId: row?.payrexx_subscription_id || null,
-    payrexxGatewayLink: row?.payrexx_gateway_link || null,
   };
+}
+
+export async function getSubscriptionCancellationData(username) {
+  const { rows } = await pool.query(
+    "SELECT payrexx_subscription_id FROM subscriptions WHERE username = $1",
+    [username]
+  );
+  return { subscriptionId: rows[0]?.payrexx_subscription_id || null };
 }
 
 export async function isSubscriptionActive(username) {
@@ -321,7 +348,7 @@ export async function deactivateSubscription(username, status = "inactive") {
       source: "payrexx_webhook",
       oldState,
       newState: subscriptionState(updatedRows[0]),
-      details: { payrexxStatus: status },
+      details: { paymentStatus: status },
     });
     await client.query("COMMIT");
     return true;
@@ -331,6 +358,91 @@ export async function deactivateSubscription(username, status = "inactive") {
   } finally {
     client.release();
   }
+}
+
+export async function completeSubscriptionCancellation(username) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT status, payrexx_gateway_id, payrexx_subscription_id, current_period_end
+       FROM subscriptions WHERE username = $1 FOR UPDATE`,
+      [username]
+    );
+    const previous = rows[0];
+    if (!previous) throw new Error("Subscription record not found after cancellation.");
+
+    if (previous.status === "cancelled") {
+      await client.query("COMMIT");
+      return previous.current_period_end;
+    }
+
+    const oldState = subscriptionState(previous);
+    const { rows: updatedRows } = await client.query(
+      `UPDATE subscriptions SET status = 'cancelled', updated_at = now()
+       WHERE username = $1
+       RETURNING status, payrexx_gateway_id, payrexx_subscription_id, current_period_end`,
+      [username]
+    );
+    await insertSubscriptionEvent(client, {
+      username,
+      actorUsername: username,
+      eventType: "subscription_status_changed",
+      source: "user_action",
+      oldState,
+      newState: subscriptionState(updatedRows[0]),
+      details: { reason: "automatic_renewal_stopped" },
+    });
+    await client.query("COMMIT");
+    return updatedRows[0].current_period_end;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function createPendingCancellationTask(username, errorMessage) {
+  const { rows } = await pool.query(
+    `INSERT INTO admin_tasks (task_type, username, details)
+     VALUES ('subscription_cancellation', $1, $2::jsonb)
+     ON CONFLICT (task_type, username) WHERE status = 'pending'
+     DO UPDATE SET details = EXCLUDED.details, updated_at = now()
+     RETURNING id, username, details, notification_status`,
+    [username, JSON.stringify({ reason: "Automatic cancellation failed; verify renewal is stopped and cancel manually if needed.", error: errorMessage })]
+  );
+  return rows[0];
+}
+
+export async function updateCancellationTaskNotification(taskId, status, errorMessage = null) {
+  await pool.query(
+    `UPDATE admin_tasks
+     SET notification_status = $2, notification_error = $3, updated_at = now()
+     WHERE id = $1 AND status = 'pending'`,
+    [taskId, status, errorMessage]
+  );
+}
+
+export async function listPendingAdminTasks() {
+  const { rows } = await pool.query(
+    `SELECT id, username, details, notification_status, notification_error, created_at
+     FROM admin_tasks
+     WHERE status = 'pending'
+     ORDER BY created_at DESC, id DESC`
+  );
+  return rows;
+}
+
+export async function completeAdminTask(taskId, adminUsername) {
+  const { rows } = await pool.query(
+    `UPDATE admin_tasks
+     SET status = 'completed', completed_at = now(), completed_by = $2, updated_at = now()
+     WHERE id = $1 AND status = 'pending'
+     RETURNING id`,
+    [taskId, adminUsername]
+  );
+  return rows.length > 0;
 }
 
 function subscriptionState(row) {
@@ -421,7 +533,7 @@ export async function recordSubscriptionCancellationRequest(username) {
     [
       username,
       rows[0] ? JSON.stringify(subscriptionState(rows[0])) : null,
-      JSON.stringify({ requestedVia: "profile", nextStep: "Payrexx Stop Renewal confirmation" }),
+      JSON.stringify({ requestedVia: "profile", nextStep: "server_cancellation_api" }),
     ]
   );
 }
